@@ -4,7 +4,7 @@ A comprehensive AI-powered system to detect fraudulent automotive insurance clai
 
 ## Features
 
-### 🔍 Three-Stage Fraud Detection Pipeline
+### 🔍 Four-Stage Fraud Detection Pipeline
 
 1. **AI Generation Detection**
    - Uses ensemble of 2 models (Organika/sdxl-detector, umm-maybe/AI-image-detector)
@@ -20,6 +20,12 @@ A comprehensive AI-powered system to detect fraudulent automotive insurance clai
    - Powered by Google Gemini AI
    - Validates if images match damage descriptions
    - Identifies car parts and damage types
+
+4. **Duplication Detection**
+   - Perceptual hashing (aHash, pHash, dHash) for fast comparison
+   - CLIP embeddings for semantic similarity
+   - Checks against all previously submitted images in database
+   - Prevents duplicate claim submissions
 
 ### 🌐 Web Interface
 
@@ -41,9 +47,13 @@ input.py (Gradio Web Interface)
     │   ├─ If tampered (score > 60%) → REJECT
     │   └─ Otherwise → Continue
     │
-    └─→ description_check.py (Description Match)
-        ├─ If description mismatch → REJECT
-        └─ If all pass → APPROVE
+    ├─→ description_check.py (Description Match)
+    │   ├─ If description mismatch → REJECT
+    │   └─ Otherwise → Continue
+    │
+    └─→ duplication_check.py (Duplication Check)
+        ├─ If duplicate found → REJECT
+        └─ If all pass → APPROVE & SAVE TO DATABASE
 ```
 
 ## Installation
@@ -118,6 +128,9 @@ Descriptions: Damaged front bumper with dent, Scratched passenger door
 FraudDetection/
 ├── input.py                    # Main Gradio interface
 ├── ai_detector.py              # AI generation detection module
+├── tampering_check.py          # Image tampering detection module
+├── description_check.py        # Image-description matching module
+├── duplication_check.py        # Image duplication detection module
 ├── tampering_check.py          # Image tampering detection module
 ├── description_check.py        # Image-description matching module
 ├── requirements.txt            # Python dependencies

@@ -9,11 +9,13 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 import gradio as gr
+import numpy as np
 
 # Import detection modules
 from ai_detector import AIImageDetector
 from tampering_check import TamperingDetector
 from description_check import DescriptionMatcher
+from duplication_check import DuplicationDetector
 
 
 class FraudDetectionPipeline:
@@ -45,6 +47,12 @@ class FraudDetectionPipeline:
             print(f"Warning: Description Matcher initialization failed: {e}")
             self.description_matcher = None
         
+        try:
+            self.duplication_detector = DuplicationDetector()
+        except Exception as e:
+            print(f"Warning: Duplication Detector initialization failed: {e}")
+            self.duplication_detector = None
+        
         # Create base directory for storing submissions
         self.base_dir = "fraud_detection_data"
         os.makedirs(self.base_dir, exist_ok=True)
@@ -65,14 +73,34 @@ class FraudDetectionPipeline:
         
         return submission_path, images_path
     
+    def _convert_to_serializable(self, obj):
+        """Convert numpy types to native Python types for JSON serialization"""
+        if isinstance(obj, dict):
+            return {key: self._convert_to_serializable(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_to_serializable(item) for item in obj]
+        elif isinstance(obj, (np.integer, np.int8, np.int16, np.int32, np.int64)):
+            return int(obj)
+        elif isinstance(obj, (np.floating, np.float16, np.float32, np.float64)):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, np.bool_):
+            return bool(obj)
+        else:
+            return obj
+    
     def _save_metadata(self, submission_path, customer_name, car_details, descriptions, results):
         """Save submission metadata to JSON file"""
+        # Convert all numpy types to native Python types
+        serializable_results = self._convert_to_serializable(results)
+        
         metadata = {
             "customer_name": customer_name,
             "car_details": car_details,
             "submission_date": datetime.now().isoformat(),
             "descriptions": descriptions,
-            "results": results
+            "results": serializable_results
         }
         
         metadata_path = os.path.join(submission_path, "metadata.json")
@@ -154,11 +182,12 @@ class FraudDetectionPipeline:
                 'ai_check': None,
                 'tampering_check': None,
                 'description_check': None,
+                'duplication_check': None,
                 'status': 'UNKNOWN'
             }
             
             # STEP 1: AI Detection
-            report.append("\n[STEP 1/3] AI GENERATION CHECK")
+            report.append("\n[STEP 1/4] AI GENERATION CHECK")
             report.append("-" * 70)
             
             if self.ai_detector:
@@ -183,7 +212,7 @@ class FraudDetectionPipeline:
                 report.append("AI Detector not available - SKIPPED")
             
             # STEP 2: Tampering Detection
-            report.append("\n[STEP 2/3] TAMPERING CHECK")
+            report.append("\n[STEP 2/4] TAMPERING CHECK")
             report.append("-" * 70)
             
             if self.tampering_detector:
@@ -208,7 +237,7 @@ class FraudDetectionPipeline:
                 report.append("Tampering Detector not available - SKIPPED")
             
             # STEP 3: Description Matching
-            report.append("\n[STEP 3/3] DESCRIPTION MATCHING")
+            report.append("\n[STEP 3/4] DESCRIPTION MATCHING")
             report.append("-" * 70)
             
             if self.description_matcher:
@@ -227,11 +256,42 @@ class FraudDetectionPipeline:
                     report.append("STATUS: REJECTED")
                     result['status'] = 'REJECTED_DESCRIPTION_MISMATCH'
                     overall_result = "FAILED"
+                    all_results.append(result)
+                    continue  # Skip duplication check
                 else:
                     report.append("\nRESULT: Passed description check")
-                    result['status'] = 'PASSED'
             else:
                 report.append("Description Matcher not available - SKIPPED")
+            
+            # STEP 4: Duplication Check
+            report.append("\n[STEP 4/4] DUPLICATION CHECK")
+            report.append("-" * 70)
+            
+            if self.duplication_detector:
+                dup_result = self.duplication_detector.check_for_duplicates(
+                    image_path, 
+                    self.base_dir
+                )
+                result['duplication_check'] = dup_result
+                
+                report.append(f"Images checked in database: {dup_result['details']['total_images_checked']}")
+                
+                if dup_result['is_duplicate']:
+                    report.append(f"\nDUPLICATE FOUND!")
+                    report.append(f"Matches: {os.path.basename(dup_result['details']['duplicate_of'])}")
+                    report.append(f"Location: {os.path.dirname(dup_result['details']['duplicate_of'])}")
+                    report.append(f"Similarity: {dup_result['details']['similarity_score']:.2%}")
+                    report.append(f"Detection method: {dup_result['details']['method_used'].upper()}")
+                    report.append("\nRESULT: FRAUD DETECTED - Duplicate image submission")
+                    report.append("STATUS: REJECTED")
+                    result['status'] = 'REJECTED_DUPLICATE'
+                    overall_result = "FAILED"
+                else:
+                    report.append("No duplicates found")
+                    report.append("\nRESULT: Passed duplication check")
+                    result['status'] = 'PASSED'
+            else:
+                report.append("Duplication Detector not available - SKIPPED")
                 result['status'] = 'PASSED'
             
             all_results.append(result)
