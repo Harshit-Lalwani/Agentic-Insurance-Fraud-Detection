@@ -11,6 +11,43 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class CarDamageDetector:
+    # Mapping dictionaries for car parts and damage types
+    CAR_PARTS = {
+        "Quarter-panel": 1,
+        "Front-wheel": 2,
+        "Back-window": 3,
+        "Trunk": 4,
+        "Front-door": 5,
+        "Rocker-panel": 6,
+        "Grille": 7,
+        "Windshield": 8,
+        "Front-window": 9,
+        "Back-door": 10,
+        "Headlight": 11,
+        "Back-wheel": 12,
+        "Back-windshield": 13,
+        "Hood": 14,
+        "Fender": 15,
+        "Tail-light": 16,
+        "License-plate": 17,
+        "Front-bumper": 18,
+        "Back-bumper": 19,
+        "Mirror": 20,
+        "Roof": 21
+    }
+
+    DAMAGE_TYPES = {
+        "No-damage": 0,
+        "Dent": 1,
+        "Scratch": 2,
+        "Broken part": 3,
+        "Paint chip": 4,
+        "Missing part": 5,
+        "Flaking": 6,
+        "Corrosion": 7,
+        "Cracked": 8
+    }
+
     def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash"):
         """
         Initialize the Car Damage Detector with Gemini API.
@@ -46,19 +83,29 @@ class CarDamageDetector:
 
 
             # Build prompt text
+            car_parts_list = "\n".join([f"   {name}: {idx}" for name, idx in self.CAR_PARTS.items()])
+            damage_types_list = "\n".join([f"   {name}: {idx}" for name, idx in self.DAMAGE_TYPES.items()])
+            
             prompt_text = (
                 "AI-Powered Multimodal Claims Assessment\n"
-                "You are a highly-skilled and meticulous automotive insurance claims assessor. Your task is to analyze an image and a corresponding text description to determine if they match, focusing on specific car parts and visible damage. You must adhere to a strict, rigorous process, providing a detailed assessment.\n"
-                "Task: Analyze the provided image and description to verify if the damage depicted in the image accurately matches the damage described. Your response must be objective and data-driven.\n"
-                f"Description: {description}\n"
+                "You are a highly-skilled and meticulous automotive insurance claims assessor. Your task is to analyze an image and a corresponding text description to determine if they match, focusing on specific car parts and visible damage. You must adhere to a strict, rigorous process, providing a detailed assessment.\n\n"
+                "Task: Analyze the provided image and description to verify if the damage depicted in the image accurately matches the damage described. Your response must be objective and data-driven.\n\n"
+                f"Description: {description}\n\n"
+                "CAR PARTS MAPPING:\n"
+                f"{car_parts_list}\n\n"
+                "DAMAGE TYPES MAPPING:\n"
+                f"{damage_types_list}\n\n"
                 "Provide a JSON response with the following keys. Do not deviate from this format.\n"
                 "1. MATCH: A single value from the set ['Exact Match', 'Partial Match', 'No Match'].\n"
                 "2. CONFIDENCE: A numeric value from 0.0 to 1.0 representing your confidence in the assessment.\n"
-                "3. CAR_PART: Identify the specific car part shown in the image.\n"
-                "4. DAMAGE_STATUS: A single value from the set ['Damaged', 'Not Damaged', 'Unclear'].\n"
-                "5. DAMAGE_TYPE: A list of all types of damage visible in the image (e.g., 'dents', 'scratches', 'cracks').\n"
-                "6. REASONING: A concise, detailed explanation of your assessment, referencing specific visual evidence from the image and how it aligns or conflicts with the provided description.\n"
-                "7. SEVERITY: A single value from the set ['Low', 'Medium', 'High'] based on the damage observed in the image."
+                "3. CAR_PART: Identify the specific car part shown in the image (use exact names from the CAR PARTS MAPPING above).\n"
+                "4. CAR_PART_ID: The numeric ID of the car part from the mapping (1-21).\n"
+                "5. DAMAGE_STATUS: A single value from the set ['Damaged', 'Not Damaged', 'Unclear'].\n"
+                "6. DAMAGE_TYPE: The primary type of damage visible (use exact names from the DAMAGE TYPES MAPPING above).\n"
+                "7. DAMAGE_TYPE_ID: The numeric ID of the damage type from the mapping (0-8).\n"
+                "8. REASONING: A concise, detailed explanation of your assessment, referencing specific visual evidence from the image and how it aligns or conflicts with the provided description.\n"
+                "9. SEVERITY: A single value from the set ['Low', 'Medium', 'High'] based on the damage observed in the image.\n"
+                "10. DAMAGE_VECTOR: A 21-element array where each index (0-20) corresponds to a car part (1-21), and the value is the damage type ID (0-8). Set the appropriate index to the damage type ID for the identified car part, and 0 for all others."
             )
 
             # Gemini expects a list of parts: text and image
@@ -75,6 +122,10 @@ class CarDamageDetector:
             result['image_path'] = image_path
             result['description'] = description
             result['raw_response'] = response.text
+            
+            # Add formatted output
+            result['formatted_output'] = self._format_output(result)
+            result['damage_vector'] = self._create_damage_vector(result)
 
             return result
 
@@ -114,6 +165,86 @@ class CarDamageDetector:
                 'damage_type': 'Unknown',
                 'reasoning': response_text
             }
+    
+    def _format_output(self, result: Dict) -> str:
+        """Format the result with proper newlines for readability."""
+        # Handle both uppercase and lowercase keys
+        match = result.get('MATCH') or result.get('match', 'N/A')
+        confidence = result.get('CONFIDENCE') or result.get('confidence', 0)
+        car_part = result.get('CAR_PART') or result.get('car_part', 'Unknown')
+        damage_status = result.get('DAMAGE_STATUS') or result.get('damage_status', 'N/A')
+        damage_type = result.get('DAMAGE_TYPE') or result.get('damage_type', [])
+        reasoning = result.get('REASONING') or result.get('reasoning', 'N/A')
+        severity = result.get('SEVERITY') or result.get('severity', 'N/A')
+        
+        # Format damage types
+        if isinstance(damage_type, list):
+            damage_type_str = ', '.join(damage_type)
+        else:
+            damage_type_str = str(damage_type)
+        
+        formatted = f"""
+{'='*60}
+CAR DAMAGE ANALYSIS REPORT
+{'='*60}
+
+IMAGE: {result.get('image_path', 'N/A')}
+DESCRIPTION: {result.get('description', 'N/A')}
+
+{'-'*60}
+ANALYSIS RESULTS
+{'-'*60}
+
+MATCH STATUS:     {match}
+CONFIDENCE:       {confidence:.2f}
+CAR PART:         {car_part}
+DAMAGE STATUS:    {damage_status}
+DAMAGE TYPE(S):   {damage_type_str}
+SEVERITY:         {severity}
+
+{'-'*60}
+REASONING
+{'-'*60}
+{reasoning}
+
+{'='*60}
+"""
+        return formatted
+    
+    def _create_damage_vector(self, result: Dict) -> List[int]:
+        """Create a vector mapping each car part to its damage type.
+        Returns a 21-element vector where each index corresponds to a car part
+        and the value is the damage type ID (0-8)."""
+        # Initialize vector with 0 (no damage) for all parts
+        vector = [0] * 21
+        
+        # Get car part and damage type from result (handle both cases)
+        car_part = result.get('CAR_PART') or result.get('car_part', '')
+        damage_type = result.get('DAMAGE_TYPE') or result.get('damage_type', [])
+        
+        # Normalize damage type
+        if isinstance(damage_type, list):
+            damage_type = damage_type[0] if damage_type else 'No-damage'
+        
+        # Find matching car part
+        car_part_id = None
+        for part_name, part_id in self.CAR_PARTS.items():
+            if part_name.lower() in str(car_part).lower():
+                car_part_id = part_id
+                break
+        
+        # Find matching damage type
+        damage_type_id = 0  # Default to no damage
+        for damage_name, damage_id in self.DAMAGE_TYPES.items():
+            if damage_name.lower() in str(damage_type).lower():
+                damage_type_id = damage_id
+                break
+        
+        # Set the damage type for the identified car part
+        if car_part_id is not None:
+            vector[car_part_id - 1] = damage_type_id
+        
+        return vector
     
     def batch_verify(self, 
                      image_description_pairs: List[Tuple[str, str]],
