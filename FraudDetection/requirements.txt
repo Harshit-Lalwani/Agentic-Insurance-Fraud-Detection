@@ -12,6 +12,13 @@ opencv-python>=4.8.0
 pillow>=10.0.0
 scikit-image>=0.21.0
 
+# Detectron2 for car parts detection
+git+https://github.com/facebookresearch/detectron2.git
+# Or visit: https://detectron2.readthedocs.io/en/latest/tutorials/install.html
+fvcore>=0.1.5
+iopath>=0.1.9
+pycocotools>=2.0.6
+
 # Image Hashing & Duplication Detection
 imagehash>=4.3.1
 ftfy>=6.1.1
