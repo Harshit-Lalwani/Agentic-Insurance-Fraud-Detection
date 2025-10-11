@@ -250,6 +250,10 @@ class FraudDetectionPipeline:
                 report.append(f"Damage Status: {desc_result['damage_status']}")
                 report.append(f"Reasoning: {desc_result['reasoning'][:200]}...")
                 
+                # Check if manual review is needed
+                if desc_result.get('manual_check_required', False):
+                    report.append("\n⚠️  WARNING: Manual check is required (Partial Match)")
+                
                 # Check if description matches
                 if not desc_result['matches']:
                     report.append("\nRESULT: FRAUD DETECTED - Image does not match description")
