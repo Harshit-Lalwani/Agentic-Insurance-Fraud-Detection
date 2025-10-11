@@ -1,3 +1,5 @@
 /manit/photos_no_class/*
 */__pycache__/
 .vscode/
+geminitest/.env
+geminitest/venv
