@@ -3,3 +3,6 @@
 .vscode/
 geminitest/.env
 geminitest/venv
+FraudDetection/.env
+FraudDetection/fraud_detection_data
+FraudDetection/venv
