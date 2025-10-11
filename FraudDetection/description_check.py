@@ -95,7 +95,8 @@ class DescriptionMatcher:
             'damage_status': 'Unknown',
             'damage_type': 'Unknown',
             'reasoning': '',
-            'severity': 'Unknown'
+            'severity': 'Unknown',
+            'manual_check_required': False
         }
         
         if not os.path.exists(image_path):
@@ -147,11 +148,15 @@ class DescriptionMatcher:
             
             result['match_type'] = match_type
             
+            # Check if it's an exact match
+            is_exact_match = 'exact' in str(match_type).lower()
+            is_partial_match = 'partial' in str(match_type).lower()
+            
             # Check if it's a match (Exact or Partial)
-            result['matches'] = (
-                'exact' in str(match_type).lower() or 
-                'partial' in str(match_type).lower()
-            )
+            result['matches'] = is_exact_match or is_partial_match
+            
+            # Flag for manual check if partial match
+            result['manual_check_required'] = is_partial_match
             
             result['confidence'] = parsed.get('CONFIDENCE', 0)
             
