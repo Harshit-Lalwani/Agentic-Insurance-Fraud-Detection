@@ -753,7 +753,7 @@ with gr.Blocks(title="Automotive Fraud Detection System", css="""
                 value="Damaged front bumper"
             )
             
-            submit_btn = gr.Button("🔍 Analyze for Fraud", variant="primary", size="lg")
+            submit_btn = gr.Button("🔍 Analyze", variant="primary", size="lg")
         
         with gr.Column(scale=1):
             gr.Markdown("### 📊 Analysis Summary")
