@@ -131,13 +131,14 @@ class DuplicationDetector:
                 'error': str(e)
             }
     
-    def find_duplicates_in_database(self, image_path, database_folder):
+    def find_duplicates_in_database(self, image_path, database_folder, exclude_folder=None):
         """
         Check if an image is a duplicate of any image in the database
         
         Args:
             image_path: Path to the image to check
             database_folder: Path to folder containing previous submissions
+            exclude_folder: Optional folder path to exclude from search (e.g., current submission folder)
             
         Returns:
             dict: {
@@ -161,11 +162,20 @@ class DuplicationDetector:
             result['error'] = f"Database folder not found: {database_folder}"
             return result
         
+        # Normalize exclude_folder path if provided
+        exclude_folder_abs = None
+        if exclude_folder:
+            exclude_folder_abs = os.path.abspath(exclude_folder)
+        
         # Find all image files in database (recursively)
         image_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff')
         database_images = []
         
         for root, dirs, files in os.walk(database_folder):
+            # Skip the excluded folder and its subdirectories
+            if exclude_folder_abs and os.path.abspath(root).startswith(exclude_folder_abs):
+                continue
+                
             for file in files:
                 if file.lower().endswith(image_extensions):
                     full_path = os.path.join(root, file)
@@ -205,13 +215,14 @@ class DuplicationDetector:
         
         return result
     
-    def check_for_duplicates(self, image_path, database_folder):
+    def check_for_duplicates(self, image_path, database_folder, exclude_folder=None):
         """
         Simplified interface: Check if image is duplicate
         
         Args:
             image_path: Path to image to check
             database_folder: Path to database folder
+            exclude_folder: Optional folder path to exclude from search (e.g., current submission folder)
             
         Returns:
             dict: {
@@ -220,7 +231,7 @@ class DuplicationDetector:
                 'details': dict
             }
         """
-        details = self.find_duplicates_in_database(image_path, database_folder)
+        details = self.find_duplicates_in_database(image_path, database_folder, exclude_folder)
         
         info_lines = []
         
