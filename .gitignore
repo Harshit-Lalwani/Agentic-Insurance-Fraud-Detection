@@ -8,3 +8,6 @@ damage-det/model_final.pth
 FraudDetection/model_final.pth
 .env
 *.pth
+damage-det/*.pth
+FraudDetection/venv
+FraudDetection/fraud_detection_data
