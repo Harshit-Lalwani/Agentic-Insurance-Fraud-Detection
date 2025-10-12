@@ -1,0 +1,79 @@
+{
+  "customer_name": "John Doe",
+  "car_details": "Toyota Camry 2020",
+  "submission_date": "2025-10-12T02:58:13.699008",
+  "descriptions": [
+    "Damaged front bumper"
+  ],
+  "results": [
+    {
+      "image": "image_1_Car damages 101.png",
+      "description": "Damaged front bumper",
+      "ai_check": {
+        "is_ai_generated": false,
+        "ai_percentage": 17.7851143758744,
+        "confidence": "High",
+        "verdict": "Human-Generated",
+        "details": {
+          "model1_label": "Human-Generated",
+          "model1_ai_score": "0.73%",
+          "model2_label": "Human-Generated",
+          "model2_ai_score": "34.84%",
+          "agreement": "Yes"
+        }
+      },
+      "tampering_check": {
+        "is_tampered": false,
+        "tampering_score": 0,
+        "confidence": "High (Authentic)",
+        "ela_prediction": null,
+        "weather_match": null,
+        "metadata_available": false,
+        "details": [
+          "ELA model not available",
+          "No EXIF metadata available"
+        ]
+      },
+      "description_check": {
+        "matches": true,
+        "match_type": "Exact Match",
+        "confidence": 0.95,
+        "car_part": "Front-bumper",
+        "damage_status": "Damaged",
+        "damage_type": "Broken part",
+        "reasoning": "The image shows the front bumper with visible damage consistent with being broken. The damage appears to be significant, including what looks like a broken part. The description 'Damaged front bumper' matches the damage observed in the image.",
+        "severity": "Medium",
+        "manual_check_required": false,
+        "raw_response": "```json\n{\n  \"MATCH\": [\n    \"Exact Match\"\n  ],\n  \"CONFIDENCE\": 0.95,\n  \"CAR_PART\": \"Front-bumper\",\n  \"CAR_PART_ID\": 18,\n  \"DAMAGE_STATUS\": [\n    \"Damaged\"\n  ],\n  \"DAMAGE_TYPE\": \"Broken part\",\n  \"DAMAGE_TYPE_ID\": 3,\n  \"REASONING\": \"The image shows the front bumper with visible damage consistent with being broken. The damage appears to be significant, including what looks like a broken part. The description 'Damaged front bumper' matches the damage observed in the image.\",\n  \"SEVERITY\": [\n    \"Medium\"\n  ]\n}\n```"
+      },
+      "duplication_check": {
+        "is_duplicate": true,
+        "duplicate_info": "DUPLICATE DETECTED!\nThis image matches: image_1_Car damages 101.png\nFrom: fraud_detection_data/John_Doe_20251012_025055/images\nSimilarity: 100.00%\nDetection method: HASH",
+        "details": {
+          "is_duplicate": true,
+          "duplicate_of": "fraud_detection_data/John_Doe_20251012_025055/images/image_1_Car damages 101.png",
+          "similarity_score": 1.0,
+          "method_used": "hash",
+          "total_images_checked": 1,
+          "matches": [
+            {
+              "image_path": "fraud_detection_data/John_Doe_20251012_025055/images/image_1_Car damages 101.png",
+              "comparison": {
+                "are_same": true,
+                "method_used": "hash",
+                "hash_scores": {
+                  "aHash": 0,
+                  "pHash": 0,
+                  "dHash": 0
+                },
+                "min_hash_diff": 0,
+                "clip_similarity": null
+              }
+            }
+          ]
+        }
+      },
+      "status": "REJECTED_DUPLICATE"
+    }
+  ]
+}

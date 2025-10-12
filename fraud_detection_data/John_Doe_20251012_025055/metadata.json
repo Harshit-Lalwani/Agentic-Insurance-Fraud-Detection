@@ -1,0 +1,65 @@
+{
+  "customer_name": "John Doe",
+  "car_details": "Toyota Camry 2020",
+  "submission_date": "2025-10-12T02:51:03.639468",
+  "descriptions": [
+    "Damaged front bumper"
+  ],
+  "results": [
+    {
+      "image": "image_1_Car damages 101.png",
+      "description": "Damaged front bumper",
+      "ai_check": {
+        "is_ai_generated": false,
+        "ai_percentage": 17.7851143758744,
+        "confidence": "High",
+        "verdict": "Human-Generated",
+        "details": {
+          "model1_label": "Human-Generated",
+          "model1_ai_score": "0.73%",
+          "model2_label": "Human-Generated",
+          "model2_ai_score": "34.84%",
+          "agreement": "Yes"
+        }
+      },
+      "tampering_check": {
+        "is_tampered": false,
+        "tampering_score": 0,
+        "confidence": "High (Authentic)",
+        "ela_prediction": null,
+        "weather_match": null,
+        "metadata_available": false,
+        "details": [
+          "ELA model not available",
+          "No EXIF metadata available"
+        ]
+      },
+      "description_check": {
+        "matches": true,
+        "match_type": "Exact Match",
+        "confidence": 0.95,
+        "car_part": "Front-bumper",
+        "damage_status": "Damaged",
+        "damage_type": "Broken part",
+        "reasoning": "The description mentions the front bumper is damaged. The image shows significant damage to the front bumper including a broken part and visible damage to the fender and headlight, which could be considered damage to the front bumper.",
+        "severity": "Medium",
+        "manual_check_required": false,
+        "raw_response": "```json\n{\n  \"MATCH\": [\n    \"Exact Match\"\n  ],\n  \"CONFIDENCE\": 0.95,\n  \"CAR_PART\": \"Front-bumper\",\n  \"CAR_PART_ID\": 18,\n  \"DAMAGE_STATUS\": [\n    \"Damaged\"\n  ],\n  \"DAMAGE_TYPE\": \"Broken part\",\n  \"DAMAGE_TYPE_ID\": 3,\n  \"REASONING\": \"The description mentions the front bumper is damaged. The image shows significant damage to the front bumper including a broken part and visible damage to the fender and headlight, which could be considered damage to the front bumper.\",\n  \"SEVERITY\": [\n    \"Medium\"\n  ]\n}\n```"
+      },
+      "duplication_check": {
+        "is_duplicate": false,
+        "duplicate_info": "No duplicates found\nChecked against 0 images in database",
+        "details": {
+          "is_duplicate": false,
+          "duplicate_of": null,
+          "similarity_score": 0.0,
+          "method_used": null,
+          "total_images_checked": 0,
+          "matches": [],
+          "error": "No images found in database"
+        }
+      },
+      "status": "PASSED"
+    }
+  ]
+}
