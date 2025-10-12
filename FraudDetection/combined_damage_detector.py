@@ -50,39 +50,6 @@ class CombinedDamageDetector:
         'High': 0.35      # > 35% of part area
     }
     
-    # Fixed base prices for car parts (in USD) - average market prices
-    PART_BASE_PRICES = {
-        'Front-bumper': 800,
-        'Back-bumper': 750,
-        'Hood': 1200,
-        'Trunk': 900,
-        'Front-door': 600,
-        'Back-door': 550,
-        'Fender': 450,
-        'Quarter-panel': 800,
-        'Rocker-panel': 400,
-        'Headlight': 350,
-        'Tail-light': 250,
-        'Mirror': 200,
-        'Windshield': 300,
-        'Back-window': 280,
-        'Front-window': 200,
-        'Back-windshield': 280,
-        'Grille': 350,
-        'License-plate': 25,
-        'Roof': 1500,
-        'Front-wheel': 800,
-        'Back-wheel': 800
-    }
-    
-    # Damage severity cost multipliers
-    SEVERITY_COST_MULTIPLIERS = {
-        'Low': 0.25,      # 25% of part value (minor repair)
-        'Medium': 0.60,   # 60% of part value (major repair)
-        'High': 0.90,     # 90% of part value (near replacement)
-        'None': 0.0       # No cost
-    }
-    
     def __init__(self, parts_model_path, damage_model_path, confidence_threshold=0.5, verbose=True):
         """
         Initialize combined detector
@@ -135,43 +102,6 @@ class CombinedDamageDetector:
         MetadataCatalog.get("car_damage").thing_classes = list(self.DAMAGE_TYPES.values())
         
         return predictor, cfg
-    
-    def _calculate_repair_cost(self, part_name, severity):
-        """
-        Calculate estimated repair cost based on part and damage severity
-        
-        Args:
-            part_name: Name of the damaged part
-            severity: Damage severity ('Low', 'Medium', 'High', 'None')
-            
-        Returns:
-            dict with price information
-        """
-        # Get base price for the part
-        base_price = self.PART_BASE_PRICES.get(part_name)
-        
-        if base_price is None or severity == 'None':
-            return {
-                'part_name': part_name,
-                'base_price': base_price,
-                'severity': severity,
-                'multiplier': self.SEVERITY_COST_MULTIPLIERS.get(severity, 0),
-                'estimated_repair_cost': 0.0,
-                'price_available': base_price is not None
-            }
-        
-        # Calculate repair cost based on severity
-        multiplier = self.SEVERITY_COST_MULTIPLIERS.get(severity, 0)
-        repair_cost = base_price * multiplier
-        
-        return {
-            'part_name': part_name,
-            'base_price': base_price,
-            'severity': severity,
-            'multiplier': multiplier,
-            'estimated_repair_cost': round(repair_cost, 2),
-            'price_available': True
-        }
     
     def _apply_nms(self, output, nms_threshold=0.1):
         """Apply Non-Maximum Suppression to damage detections"""
@@ -302,24 +232,6 @@ class CombinedDamageDetector:
                 parts_result['detections'], damage_detections
             )
             
-            # Calculate price estimates for damaged parts
-            price_estimates = []
-            total_repair_cost = 0
-            
-            print("\nCalculating repair costs...")
-            for part_analysis in damage_analysis:
-                if part_analysis['is_damaged']:
-                    cost_info = self._calculate_repair_cost(
-                        part_analysis['part_name'],
-                        part_analysis['severity']
-                    )
-                    price_estimates.append(cost_info)
-                    if cost_info['estimated_repair_cost'] > 0:
-                        total_repair_cost += cost_info['estimated_repair_cost']
-                        print(f"  {part_analysis['part_name']}: ${cost_info['estimated_repair_cost']:.2f} ({part_analysis['severity']} severity)")
-            
-            print(f"\nTotal estimated repair cost: ${total_repair_cost:.2f}")
-            
             # Compile results
             result = {
                 'image_path': image_path,
@@ -330,9 +242,7 @@ class CombinedDamageDetector:
                 'parts_detections': parts_result['detections'],
                 'damage_detections': damage_detections,
                 'damage_analysis': damage_analysis,
-                'overall_severity': self._calculate_overall_severity(damage_analysis),
-                'price_estimates': price_estimates,
-                'total_estimated_repair_cost': round(total_repair_cost, 2)
+                'overall_severity': self._calculate_overall_severity(damage_analysis)
             }
             
             return result
@@ -425,17 +335,13 @@ class CombinedDamageDetector:
             return f"Error: {result['error']}"
         
         report = []
-        report.append("=" * 70)
+        report.append("=" * 60)
         report.append("CAR DAMAGE ASSESSMENT REPORT")
-        report.append("=" * 70)
+        report.append("=" * 60)
         report.append(f"Image: {os.path.basename(result['image_path'])}")
         report.append(f"Parts Detected: {result['num_parts']}")
         report.append(f"Damage Types Found: {result['num_damage']}")
         report.append(f"Overall Severity: {result['overall_severity']}")
-        
-        # Add cost summary
-        if result.get('total_estimated_repair_cost', 0) > 0:
-            report.append(f"Total Estimated Repair Cost: ${result['total_estimated_repair_cost']:,.2f}")
         report.append("")
         
         # Summary of detected damage types
@@ -451,7 +357,7 @@ class CombinedDamageDetector:
         
         # Detailed part-by-part analysis
         report.append("PART-BY-PART ANALYSIS:")
-        report.append("-" * 70)
+        report.append("-" * 60)
         
         damaged_parts = [part for part in result['damage_analysis'] if part['is_damaged']]
         undamaged_parts = [part for part in result['damage_analysis'] if not part['is_damaged']]
@@ -459,24 +365,9 @@ class CombinedDamageDetector:
         if damaged_parts:
             for part in damaged_parts:
                 report.append(f"\n🔴 {part['part_name']} - DAMAGED ({part['severity']} severity)")
-                
-                # Find price estimate for this part
-                price_info = None
-                for estimate in result.get('price_estimates', []):
-                    if estimate['part_name'] == part['part_name']:
-                        price_info = estimate
-                        break
-                
-                # Display damage details
                 for damage in part['damages']:
                     report.append(f"   • {damage['damage_type']}: {damage['overlap_ratio']:.1%} coverage")
                     report.append(f"     Confidence: {damage['confidence']:.2f}, Severity: {damage['severity']}")
-                
-                # Display price estimate
-                if price_info and price_info['price_available']:
-                    report.append(f"   💰 Base Part Price: ${price_info['base_price']:,.2f}")
-                    report.append(f"   💰 Estimated Repair Cost: ${price_info['estimated_repair_cost']:,.2f}")
-                    report.append(f"      (Based on {price_info['multiplier']:.0%} of part value for {price_info['severity']} severity)")
         
         if undamaged_parts:
             report.append(f"\n🟢 UNDAMAGED PARTS ({len(undamaged_parts)}):")
@@ -485,60 +376,67 @@ class CombinedDamageDetector:
             unique_undamaged_names.sort()  # Sort alphabetically for consistency
             report.append(f"   {', '.join(unique_undamaged_names)}")
         
-        # Cost summary
-        if result.get('price_estimates'):
-            report.append(f"\n" + "-" * 70)
-            report.append("REPAIR COST SUMMARY:")
-            parts_with_prices = [p for p in result['price_estimates'] if p['price_available'] and p['estimated_repair_cost'] > 0]
-            
-            if parts_with_prices:
-                for price_info in parts_with_prices:
-                    report.append(f"  {price_info['part_name']:.<40} ${price_info['estimated_repair_cost']:>10,.2f}")
-                report.append(f"  {'TOTAL ESTIMATED COST':.<40} ${result['total_estimated_repair_cost']:>10,.2f}")
-        
-        report.append("\n" + "=" * 70)
+        report.append("\n" + "=" * 60)
         
         return "\n".join(report)
     
     def save_visualization(self, image_path, result, output_path):
-        """Create and save visualization showing both parts and damage"""
+        """
+        Create and save 3 separate visualizations showing original, parts, and damage
+        
+        Args:
+            image_path: Path to the input image
+            result: Detection results dictionary
+            output_path: Base path for output files (without extension)
+            
+        Returns:
+            list: Paths to the 3 generated images [original, parts, damage]
+        """
         if 'error' in result:
             print(f"Cannot create visualization: {result['error']}")
-            return
+            return []
         
         try:
             # Load image
             image = cv2.imread(image_path)
             
-            # Create figure with subplots
-            fig, axes = plt.subplots(1, 3, figsize=(24, 8))
+            # Get base path without extension
+            base_path = os.path.splitext(output_path)[0]
             
-            # Original image
-            axes[0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-            axes[0].set_title('Original Image', fontsize=14)
-            axes[0].axis('off')
+            # Generate 3 separate images
+            output_paths = []
             
-            # Parts detection visualization
+            # 1. Save original image
+            original_path = f"{base_path}_original.jpg"
+            cv2.imwrite(original_path, image)
+            output_paths.append(original_path)
+            print(f"Original image saved to: {original_path}")
+            
+            # 2. Generate and save parts detection visualization
             parts_vis = self.parts_detector.detect(image_path, return_visualization=True)
+            parts_path = f"{base_path}_parts.jpg"
             if 'visualization' in parts_vis:
-                axes[1].imshow(cv2.cvtColor(parts_vis['visualization'], cv2.COLOR_BGR2RGB))
-            axes[1].set_title('Car Parts Detection', fontsize=14)
-            axes[1].axis('off')
+                cv2.imwrite(parts_path, parts_vis['visualization'])
+                output_paths.append(parts_path)
+                print(f"Parts detection saved to: {parts_path}")
+            else:
+                # Fallback to original if parts visualization fails
+                cv2.imwrite(parts_path, image)
+                output_paths.append(parts_path)
             
-            # Combined damage + parts visualization
+            # 3. Generate and save combined damage analysis visualization
             combined_image = self._create_combined_visualization(image, result)
-            axes[2].imshow(cv2.cvtColor(combined_image, cv2.COLOR_BGR2RGB))
-            axes[2].set_title('Damage Analysis', fontsize=14)
-            axes[2].axis('off')
+            damage_path = f"{base_path}_damage.jpg"
+            cv2.imwrite(damage_path, combined_image)
+            output_paths.append(damage_path)
+            print(f"Damage analysis saved to: {damage_path}")
             
-            plt.tight_layout()
-            plt.savefig(output_path, dpi=150, bbox_inches='tight')
-            plt.close()
-            
-            print(f"Visualization saved to: {output_path}")
+            print(f"All visualizations saved successfully!")
+            return output_paths
             
         except Exception as e:
             print(f"Error creating visualization: {e}")
+            return []
     
     def _create_combined_visualization(self, image, result):
         """Create visualization highlighting damaged parts"""
@@ -598,8 +496,8 @@ def main():
     test_image = sys.argv[1]
     
     # Model paths
-    parts_model_path = "./model_final.pth"  # Car parts model
-    damage_model_path = "../damage-det/model_final.pth"  # Damage detection model
+    parts_model_path = "../part_detection_model.pth"  # Car parts model
+    damage_model_path = "../damage_model.pth"  # Damage detection model
     
     # Initialize combined detector
     try:
