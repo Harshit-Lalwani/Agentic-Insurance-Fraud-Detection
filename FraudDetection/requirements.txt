@@ -1,52 +1,175 @@
-# Automotive Fraud Detection System - Requirements
+# ============================================================================
+# Automotive Fraud Detection System - Complete Requirements
+# ============================================================================
+# 
+# Installation Instructions:
+# 1. Install Python 3.8 or higher
+# 2. Create a virtual environment: python -m venv venv
+# 3. Activate virtual environment:
+#    - Linux/Mac: source venv/bin/activate
+#    - Windows: venv\Scripts\activate
+# 4. Install requirements: pip install -r requirements.txt
+# 
+# Note: Detectron2 and CLIP require special installation (see sections below)
+# ============================================================================
 
-# Core ML/AI Libraries
-tensorflow>=2.15.0
-tf-keras>=2.20.0
-torch>=2.0.0
-torchvision>=0.15.0
-transformers>=4.30.0
+# ----------------------------------------------------------------------------
+# Core Deep Learning Frameworks
+# ----------------------------------------------------------------------------
+torch>=2.0.0,<2.5.0
+torchvision>=0.15.0,<0.20.0
+tensorflow>=2.15.0,<2.18.0
+tf-keras>=2.15.0
 
-# Computer Vision
+# ----------------------------------------------------------------------------
+# Computer Vision Libraries
+# ----------------------------------------------------------------------------
 opencv-python>=4.8.0
+opencv-contrib-python>=4.8.0
 pillow>=10.0.0
 scikit-image>=0.21.0
+matplotlib>=3.7.0
+shapely>=2.0.0
 
-# Detectron2 for car parts detection
+# ----------------------------------------------------------------------------
+# Detectron2 for Object Detection (Car Parts & Damage)
+# ----------------------------------------------------------------------------
+# Install detectron2 with one of these methods:
+# Method 1 (Recommended): Install from GitHub
 git+https://github.com/facebookresearch/detectron2.git
-# Or visit: https://detectron2.readthedocs.io/en/latest/tutorials/install.html
+#
+# Method 2: Install pre-built (check https://detectron2.readthedocs.io/)
+# pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu118/torch2.0/index.html
+#
+# Dependencies for detectron2:
 fvcore>=0.1.5
 iopath>=0.1.9
 pycocotools>=2.0.6
+omegaconf>=2.3.0
+hydra-core>=1.3.0
+cloudpickle>=2.2.0
+black>=23.0.0
+tabulate>=0.9.0
 
-# Image Hashing & Duplication Detection
-imagehash>=4.3.1
+# ----------------------------------------------------------------------------
+# Transformers & NLP (AI Detection, Description Matching)
+# ----------------------------------------------------------------------------
+transformers>=4.35.0
+huggingface-hub>=0.19.0
+tokenizers>=0.15.0
+sentencepiece>=0.1.99
+safetensors>=0.4.0
+accelerate>=0.24.0
+
+# ----------------------------------------------------------------------------
+# CLIP for Semantic Image Similarity (Duplication Detection)
+# ----------------------------------------------------------------------------
+# Install CLIP from GitHub:
+git+https://github.com/openai/CLIP.git
+#
+# CLIP dependencies:
 ftfy>=6.1.1
 regex>=2023.8.8
 
-# CLIP for semantic similarity
-git+https://github.com/openai/CLIP.git
+# ----------------------------------------------------------------------------
+# Image Hashing & Duplication Detection
+# ----------------------------------------------------------------------------
+imagehash>=4.3.1
 
-# Data Processing
-numpy>=1.24.0
-pandas>=2.0.0
+# ----------------------------------------------------------------------------
+# Web Interface (Gradio)
+# ----------------------------------------------------------------------------
+gradio>=4.8.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.4.0
+aiofiles>=23.2.0
+httpx>=0.25.0
+websockets>=12.0
 
-# Gradio for Web Interface
-gradio>=4.0.0
-
-# Google Generative AI (Gemini)
+# ----------------------------------------------------------------------------
+# Google Generative AI (Gemini for Description Matching)
+# ----------------------------------------------------------------------------
 google-generativeai>=0.3.0
+google-ai-generativelanguage>=0.4.0
+google-api-core>=2.14.0
+google-auth>=2.23.0
+proto-plus>=1.22.0
+protobuf>=4.24.0
 
-# Image Metadata
+# ----------------------------------------------------------------------------
+# Image Metadata & EXIF
+# ----------------------------------------------------------------------------
 exif>=1.6.0
 piexif>=1.1.3
 
-# Geolocation
+# ----------------------------------------------------------------------------
+# Geolocation & Weather API
+# ----------------------------------------------------------------------------
 geopy>=2.4.0
 
-# Environment Variables
+# ----------------------------------------------------------------------------
+# Environment & Configuration
+# ----------------------------------------------------------------------------
 python-dotenv>=1.0.0
 
-# Utilities
+# ----------------------------------------------------------------------------
+# Data Processing & Utilities
+# ----------------------------------------------------------------------------
+numpy>=1.24.0,<2.0.0
+pandas>=2.0.0
+scipy>=1.11.0
+scikit-learn>=1.3.0
+
+# ----------------------------------------------------------------------------
+# Networking & API
+# ----------------------------------------------------------------------------
 requests>=2.31.0
+urllib3>=2.0.0
+
+# ----------------------------------------------------------------------------
+# Progress Bars & CLI
+# ----------------------------------------------------------------------------
 tqdm>=4.66.0
+colorama>=0.4.6
+
+# ----------------------------------------------------------------------------
+# Additional Utilities
+# ----------------------------------------------------------------------------
+python-multipart>=0.0.6
+typing-extensions>=4.8.0
+filelock>=3.13.0
+fsspec>=2023.10.0
+packaging>=23.2
+pyyaml>=6.0.0
+certifi>=2023.7.22
+charset-normalizer>=3.3.0
+idna>=3.4
+
+# ============================================================================
+# CUDA & GPU Support (Optional but Recommended)
+# ============================================================================
+# Ensure you have CUDA toolkit installed for GPU acceleration:
+# - CUDA 11.8 or 12.1 recommended
+# - cuDNN 8.x
+# 
+# Verify GPU support with:
+# python -c "import torch; print(torch.cuda.is_available())"
+# ============================================================================
+
+# ============================================================================
+# Post-Installation Steps
+# ============================================================================
+#
+# 1. Set up environment variables (.env file):
+#    GEMINI_API_KEY=your_gemini_api_key_here
+#
+# 2. Download model weights:
+#    - Place model_parts.pth in damage-det/ folder
+#    - Place model_damage.pth in damage-det/ folder
+#
+# 3. Test installation:
+#    cd FraudDetection
+#    python input.py
+#
+# ============================================================================
