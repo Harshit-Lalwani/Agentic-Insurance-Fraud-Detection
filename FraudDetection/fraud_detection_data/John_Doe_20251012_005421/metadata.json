@@ -1,0 +1,53 @@
+{
+  "customer_name": "John Doe",
+  "car_details": "Toyota Camry 2020",
+  "submission_date": "2025-10-12T00:54:24.313570",
+  "descriptions": [
+    "Damaged front bumper"
+  ],
+  "results": [
+    {
+      "image": "image_1_Car damages 1032.png",
+      "description": "Damaged front bumper",
+      "ai_check": {
+        "is_ai_generated": true,
+        "ai_percentage": 34.48635696108795,
+        "confidence": "Low",
+        "verdict": "AI-Generated",
+        "details": {
+          "model1_label": "Human-Generated",
+          "model1_ai_score": "0.00%",
+          "model2_label": "AI-Generated",
+          "model2_ai_score": "68.97%",
+          "agreement": "No"
+        }
+      },
+      "tampering_check": {
+        "is_tampered": false,
+        "tampering_score": 0,
+        "confidence": "High (Authentic)",
+        "ela_prediction": null,
+        "weather_match": null,
+        "metadata_available": false,
+        "details": [
+          "ELA model not available",
+          "No EXIF metadata available"
+        ]
+      },
+      "description_check": {
+        "matches": false,
+        "match_type": "No Match",
+        "confidence": 0.95,
+        "car_part": "Front-bumper",
+        "damage_status": "Not Damaged",
+        "damage_type": "No-damage",
+        "reasoning": "The description says that the front bumper is damaged. In the provided image, the front bumper is not visible. However, the back bumper appears to be in good condition with no visible damage.",
+        "severity": "Low",
+        "manual_check_required": false,
+        "raw_response": "```json\n{\n  \"MATCH\": [\n    \"No Match\"\n  ],\n  \"CONFIDENCE\": 0.95,\n  \"CAR_PART\": \"Front-bumper\",\n  \"CAR_PART_ID\": 18,\n  \"DAMAGE_STATUS\": [\n    \"Not Damaged\"\n  ],\n  \"DAMAGE_TYPE\": \"No-damage\",\n  \"DAMAGE_TYPE_ID\": 0,\n  \"REASONING\": \"The description says that the front bumper is damaged. In the provided image, the front bumper is not visible. However, the back bumper appears to be in good condition with no visible damage.\",\n  \"SEVERITY\": [\n    \"Low\"\n  ]\n}\n```"
+      },
+      "duplication_check": null,
+      "status": "REJECTED_DESCRIPTION_MISMATCH"
+    }
+  ]
+}

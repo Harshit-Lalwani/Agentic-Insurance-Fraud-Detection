@@ -1,0 +1,53 @@
+{
+  "customer_name": "John Doe",
+  "car_details": "Toyota Camry 2020",
+  "submission_date": "2025-10-12T00:19:33.017410",
+  "descriptions": [
+    "damaged engine"
+  ],
+  "results": [
+    {
+      "image": "image_1_download.jpeg",
+      "description": "damaged engine",
+      "ai_check": {
+        "is_ai_generated": false,
+        "ai_percentage": 3.080612489995893,
+        "confidence": "High",
+        "verdict": "Human-Generated",
+        "details": {
+          "model1_label": "Human-Generated",
+          "model1_ai_score": "0.00%",
+          "model2_label": "Human-Generated",
+          "model2_ai_score": "6.16%",
+          "agreement": "Yes"
+        }
+      },
+      "tampering_check": {
+        "is_tampered": false,
+        "tampering_score": 0,
+        "confidence": "High (Authentic)",
+        "ela_prediction": null,
+        "weather_match": null,
+        "metadata_available": false,
+        "details": [
+          "ELA model not available",
+          "No EXIF metadata available"
+        ]
+      },
+      "description_check": {
+        "matches": false,
+        "match_type": "No Match",
+        "confidence": 0.95,
+        "car_part": "Engine",
+        "damage_status": "Unclear",
+        "damage_type": "Unknown",
+        "reasoning": "The image depicts a car in a severe crash, but the engine itself is not directly visible. The description mentions damage to the engine, but based on the image alone, it's impossible to confirm or deny engine damage. The engine is under the hood, and its condition cannot be determined.",
+        "severity": "High",
+        "manual_check_required": false,
+        "raw_response": "```json\n{\n  \"MATCH\": [\"No Match\"],\n  \"CONFIDENCE\": 0.95,\n  \"CAR_PART\": \"Engine\",\n  \"CAR_PART_ID\": null,\n  \"DAMAGE_STATUS\": [\"Unclear\"],\n  \"DAMAGE_TYPE\": \"Unknown\",\n  \"DAMAGE_TYPE_ID\": null,\n  \"REASONING\": \"The image depicts a car in a severe crash, but the engine itself is not directly visible. The description mentions damage to the engine, but based on the image alone, it's impossible to confirm or deny engine damage. The engine is under the hood, and its condition cannot be determined.\",\n  \"SEVERITY\": [\"High\"]\n}\n```"
+      },
+      "duplication_check": null,
+      "status": "REJECTED_DESCRIPTION_MISMATCH"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "customer_name": "John Doe",
+  "car_details": "Toyota Camry 2020",
+  "submission_date": "2025-10-12T00:32:32.208969",
+  "descriptions": [
+    "Damaged front bumper"
+  ],
+  "results": [
+    {
+      "image": "image_1_download.jpeg",
+      "description": "Damaged front bumper",
+      "ai_check": {
+        "is_ai_generated": false,
+        "ai_percentage": 3.080612489995893,
+        "confidence": "High",
+        "verdict": "Human-Generated",
+        "details": {
+          "model1_label": "Human-Generated",
+          "model1_ai_score": "0.00%",
+          "model2_label": "Human-Generated",
+          "model2_ai_score": "6.16%",
+          "agreement": "Yes"
+        }
+      },
+      "tampering_check": {
+        "is_tampered": false,
+        "tampering_score": 0,
+        "confidence": "High (Authentic)",
+        "ela_prediction": null,
+        "weather_match": null,
+        "metadata_available": false,
+        "details": [
+          "ELA model not available",
+          "No EXIF metadata available"
+        ]
+      },
+      "description_check": {
+        "matches": false,
+        "match_type": "No Match",
+        "confidence": 0.9,
+        "car_part": "Front-bumper",
+        "damage_status": "Damaged",
+        "damage_type": "Broken part",
+        "reasoning": "The description mentions a damaged front bumper, and the image shows significant damage to the vehicle, however, the vehicle is significantly damaged overall, and not only the front bumper. The image depicts a severe crash with significant damage to multiple parts and the car is upside down. Therefore, the image does not exclusively match the described damage to only the front bumper.",
+        "severity": "High",
+        "manual_check_required": false,
+        "raw_response": "```json\n{\n  \"MATCH\": [\"No Match\"],\n  \"CONFIDENCE\": 0.9,\n  \"CAR_PART\": \"Front-bumper\",\n  \"CAR_PART_ID\": 18,\n  \"DAMAGE_STATUS\": [\"Damaged\"],\n  \"DAMAGE_TYPE\": \"Broken part\",\n  \"DAMAGE_TYPE_ID\": 3,\n  \"REASONING\": \"The description mentions a damaged front bumper, and the image shows significant damage to the vehicle, however, the vehicle is significantly damaged overall, and not only the front bumper. The image depicts a severe crash with significant damage to multiple parts and the car is upside down. Therefore, the image does not exclusively match the described damage to only the front bumper.\",\n  \"SEVERITY\": [\"High\"]\n}\n```"
+      },
+      "duplication_check": null,
+      "status": "REJECTED_DESCRIPTION_MISMATCH"
+    }
+  ]
+}
