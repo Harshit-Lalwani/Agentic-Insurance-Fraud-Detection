@@ -1,0 +1,610 @@
+{
+  "image_path": "../archive/Car damages dataset/File1/img/Car damages 14.png",
+  "parts_detected": [
+    "Back-door",
+    "Back-window",
+    "Fender",
+    "Front-bumper",
+    "Front-door",
+    "Front-wheel",
+    "Front-window",
+    "Headlight",
+    "Hood",
+    "License-plate",
+    "Mirror",
+    "Rocker-panel",
+    "Roof",
+    "Tail-light",
+    "Windshield"
+  ],
+  "num_parts": 15,
+  "damage_detected": [
+    "Missing part",
+    "Missing part",
+    "Broken part",
+    "Missing part",
+    "Missing part",
+    "Paint chip",
+    "Paint chip"
+  ],
+  "num_damage": 7,
+  "parts_detections": [
+    {
+      "part_name": "Fender",
+      "class_id": 15,
+      "confidence": 0.9818339943885803,
+      "bbox": [
+        378.05316162109375,
+        122.20545959472656,
+        492.79547119140625,
+        245.43756103515625
+      ],
+      "bbox_area": 14139.935932477936,
+      "has_mask": true,
+      "mask_area": 6225
+    },
+    {
+      "part_name": "Mirror",
+      "class_id": 20,
+      "confidence": 0.9521291255950928,
+      "bbox": [
+        481.5926818847656,
+        82.69292449951172,
+        537.415283203125,
+        111.01554870605469
+      ],
+      "bbox_area": 1581.0425593715627,
+      "has_mask": true,
+      "mask_area": 1055
+    },
+    {
+      "part_name": "Front-bumper",
+      "class_id": 18,
+      "confidence": 0.9448011517524719,
+      "bbox": [
+        108.43441772460938,
+        181.25344848632812,
+        444.1036376953125,
+        344.96539306640625
+      ],
+      "bbox_area": 54953.0607370818,
+      "has_mask": true,
+      "mask_area": 31115
+    },
+    {
+      "part_name": "Hood",
+      "class_id": 14,
+      "confidence": 0.9307071566581726,
+      "bbox": [
+        122.91886138916016,
+        85.57273864746094,
+        469.967041015625,
+        223.8536376953125
+      ],
+      "bbox_area": 47990.13429166784,
+      "has_mask": true,
+      "mask_area": 31568
+    },
+    {
+      "part_name": "License-plate",
+      "class_id": 17,
+      "confidence": 0.9287045001983643,
+      "bbox": [
+        136.84165954589844,
+        238.78018188476562,
+        225.83265686035156,
+        282.7718505859375
+      ],
+      "bbox_area": 3914.862471244298,
+      "has_mask": true,
+      "mask_area": 2121
+    },
+    {
+      "part_name": "Windshield",
+      "class_id": 8,
+      "confidence": 0.9180101752281189,
+      "bbox": [
+        261.0954895019531,
+        28.382463455200195,
+        476.3235168457031,
+        102.90453338623047
+      ],
+      "bbox_area": 16039.238104828633,
+      "has_mask": true,
+      "mask_area": 12561
+    },
+    {
+      "part_name": "Rocker-panel",
+      "class_id": 6,
+      "confidence": 0.9124884009361267,
+      "bbox": [
+        476.9037780761719,
+        155.27088928222656,
+        545.0697021484375,
+        250.7093048095703
+      ],
+      "bbox_area": 6505.647786414251,
+      "has_mask": true,
+      "mask_area": 777
+    },
+    {
+      "part_name": "Mirror",
+      "class_id": 20,
+      "confidence": 0.9021825790405273,
+      "bbox": [
+        253.35781860351562,
+        58.930179595947266,
+        274.1075134277344,
+        76.48493194580078
+      ],
+      "bbox_area": 364.25575397419743,
+      "has_mask": true,
+      "mask_area": 203
+    },
+    {
+      "part_name": "Roof",
+      "class_id": 21,
+      "confidence": 0.8902705311775208,
+      "bbox": [
+        319.5976257324219,
+        17.17286491394043,
+        513.5339965820312,
+        36.51044464111328
+      ],
+      "bbox_area": 3750.260033302882,
+      "has_mask": true,
+      "mask_area": 2041
+    },
+    {
+      "part_name": "Front-door",
+      "class_id": 5,
+      "confidence": 0.8705264329910278,
+      "bbox": [
+        478.1217346191406,
+        26.17806625366211,
+        540.8508911132812,
+        226.4040985107422
+      ],
+      "bbox_area": 12560.010111655225,
+      "has_mask": true,
+      "mask_area": 8096
+    },
+    {
+      "part_name": "Headlight",
+      "class_id": 11,
+      "confidence": 0.8639233708381653,
+      "bbox": [
+        100.18033599853516,
+        153.75054931640625,
+        120.87642669677734,
+        190.08514404296875
+      ],
+      "bbox_area": 751.9840679448098,
+      "has_mask": true,
+      "mask_area": 359
+    },
+    {
+      "part_name": "Front-wheel",
+      "class_id": 2,
+      "confidence": 0.8589975833892822,
+      "bbox": [
+        400.8760070800781,
+        193.4929656982422,
+        470.3583984375,
+        341.8993835449219
+      ],
+      "bbox_area": 10311.632804776076,
+      "has_mask": true,
+      "mask_area": 4761
+    },
+    {
+      "part_name": "Headlight",
+      "class_id": 11,
+      "confidence": 0.8235753774642944,
+      "bbox": [
+        267.63592529296875,
+        212.54855346679688,
+        393.2826232910156,
+        255.4095916748047
+      ],
+      "bbox_area": 5385.347923604306,
+      "has_mask": true,
+      "mask_area": 3888
+    },
+    {
+      "part_name": "Front-window",
+      "class_id": 9,
+      "confidence": 0.728165864944458,
+      "bbox": [
+        487.00927734375,
+        47.48377990722656,
+        517.5590209960938,
+        96.48409271240234
+      ],
+      "bbox_area": 1496.946995082777,
+      "has_mask": true,
+      "mask_area": 962
+    },
+    {
+      "part_name": "Back-window",
+      "class_id": 3,
+      "confidence": 0.5954791903495789,
+      "bbox": [
+        512.647705078125,
+        35.5600471496582,
+        546.0726928710938,
+        81.18434143066406
+      ],
+      "bbox_area": 1524.9914794054348,
+      "has_mask": true,
+      "mask_area": 898
+    },
+    {
+      "part_name": "Tail-light",
+      "class_id": 16,
+      "confidence": 0.5434090495109558,
+      "bbox": [
+        510.3988952636719,
+        32.708553314208984,
+        546.287109375,
+        82.93585968017578
+      ],
+      "bbox_area": 1802.5683250970906,
+      "has_mask": true,
+      "mask_area": 1014
+    },
+    {
+      "part_name": "Back-window",
+      "class_id": 3,
+      "confidence": 0.5063479542732239,
+      "bbox": [
+        351.1609191894531,
+        32.312278747558594,
+        473.7850341796875,
+        110.02165985107422
+      ],
+      "bbox_area": 9529.044084257446,
+      "has_mask": true,
+      "mask_area": 6414
+    },
+    {
+      "part_name": "Back-door",
+      "class_id": 10,
+      "confidence": 0.501984179019928,
+      "bbox": [
+        521.541748046875,
+        33.02824020385742,
+        560.7448120117188,
+        164.38809204101562
+      ],
+      "bbox_area": 5149.708673984511,
+      "has_mask": true,
+      "mask_area": 2021
+    }
+  ],
+  "damage_detections": [
+    {
+      "damage_type": "Missing part",
+      "confidence": 0.9125916361808777,
+      "bbox": [
+        310.90283203125,
+        305.1980285644531,
+        374.5792541503906,
+        330.56451416015625
+      ],
+      "class_id": 4
+    },
+    {
+      "damage_type": "Missing part",
+      "confidence": 0.9079070687294006,
+      "bbox": [
+        256.4059143066406,
+        303.86383056640625,
+        317.3644714355469,
+        330.792724609375
+      ],
+      "class_id": 4
+    },
+    {
+      "damage_type": "Broken part",
+      "confidence": 0.8869106769561768,
+      "bbox": [
+        355.53082275390625,
+        133.23379516601562,
+        464.9486083984375,
+        217.9225311279297
+      ],
+      "class_id": 2
+    },
+    {
+      "damage_type": "Missing part",
+      "confidence": 0.8862432837486267,
+      "bbox": [
+        130.88308715820312,
+        187.57887268066406,
+        262.8981628417969,
+        282.2314758300781
+      ],
+      "class_id": 4
+    },
+    {
+      "damage_type": "Missing part",
+      "confidence": 0.7083879113197327,
+      "bbox": [
+        58.37791442871094,
+        64.08175659179688,
+        103.49378204345703,
+        93.16156005859375
+      ],
+      "class_id": 4
+    },
+    {
+      "damage_type": "Paint chip",
+      "confidence": 0.5393474698066711,
+      "bbox": [
+        281.048095703125,
+        273.5796813964844,
+        284.9781188964844,
+        279.69110107421875
+      ],
+      "class_id": 3
+    },
+    {
+      "damage_type": "Paint chip",
+      "confidence": 0.5114254355430603,
+      "bbox": [
+        265.0788879394531,
+        270.2826232910156,
+        270.7846374511719,
+        277.01580810546875
+      ],
+      "class_id": 3
+    }
+  ],
+  "damage_analysis": [
+    {
+      "part_name": "Fender",
+      "damages": [
+        {
+          "damage_type": "Broken part",
+          "confidence": 0.8869106769561768,
+          "overlap_ratio": 0.5204454662001704,
+          "severity": "High"
+        }
+      ],
+      "total_damage_ratio": 0.5204454662001704,
+      "severity": "High",
+      "is_damaged": true
+    },
+    {
+      "part_name": "Mirror",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Front-bumper",
+      "damages": [
+        {
+          "damage_type": "Missing part",
+          "confidence": 0.9125916361808777,
+          "overlap_ratio": 0.029393213459011924,
+          "severity": "Low"
+        },
+        {
+          "damage_type": "Missing part",
+          "confidence": 0.9079070687294006,
+          "overlap_ratio": 0.029871794289865163,
+          "severity": "Low"
+        },
+        {
+          "damage_type": "Broken part",
+          "confidence": 0.8869106769561768,
+          "overlap_ratio": 0.05910287484122001,
+          "severity": "Low"
+        },
+        {
+          "damage_type": "Missing part",
+          "confidence": 0.8862432837486267,
+          "overlap_ratio": 0.22738625293690273,
+          "severity": "Medium"
+        }
+      ],
+      "total_damage_ratio": 0.34575413552699985,
+      "severity": "Medium",
+      "is_damaged": true
+    },
+    {
+      "part_name": "Hood",
+      "damages": [
+        {
+          "damage_type": "Broken part",
+          "confidence": 0.8869106769561768,
+          "overlap_ratio": 0.19309081115857352,
+          "severity": "Medium"
+        },
+        {
+          "damage_type": "Missing part",
+          "confidence": 0.8862432837486267,
+          "overlap_ratio": 0.09978750673437556,
+          "severity": "Low"
+        }
+      ],
+      "total_damage_ratio": 0.29287831789294905,
+      "severity": "Medium",
+      "is_damaged": true
+    },
+    {
+      "part_name": "License-plate",
+      "damages": [
+        {
+          "damage_type": "Missing part",
+          "confidence": 0.8862432837486267,
+          "overlap_ratio": 0.9877164296828553,
+          "severity": "High"
+        }
+      ],
+      "total_damage_ratio": 0.9877164296828553,
+      "severity": "High",
+      "is_damaged": true
+    },
+    {
+      "part_name": "Windshield",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Rocker-panel",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Mirror",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Roof",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Front-door",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Headlight",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Front-wheel",
+      "damages": [
+        {
+          "damage_type": "Broken part",
+          "confidence": 0.8869106769561768,
+          "overlap_ratio": 0.15179611568714435,
+          "severity": "Medium"
+        }
+      ],
+      "total_damage_ratio": 0.15179611568714435,
+      "severity": "Medium",
+      "is_damaged": true
+    },
+    {
+      "part_name": "Headlight",
+      "damages": [
+        {
+          "damage_type": "Broken part",
+          "confidence": 0.8869106769561768,
+          "overlap_ratio": 0.03767209391704181,
+          "severity": "Low"
+        }
+      ],
+      "total_damage_ratio": 0.03767209391704181,
+      "severity": "Low",
+      "is_damaged": true
+    },
+    {
+      "part_name": "Front-window",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Back-window",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Tail-light",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Back-window",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    },
+    {
+      "part_name": "Back-door",
+      "damages": [],
+      "total_damage_ratio": 0.0,
+      "severity": "None",
+      "is_damaged": false
+    }
+  ],
+  "overall_severity": "High",
+  "price_estimates": [
+    {
+      "part_name": "Fender",
+      "base_price": 450,
+      "severity": "High",
+      "multiplier": 0.9,
+      "estimated_repair_cost": 405.0,
+      "price_available": true
+    },
+    {
+      "part_name": "Front-bumper",
+      "base_price": 800,
+      "severity": "Medium",
+      "multiplier": 0.6,
+      "estimated_repair_cost": 480.0,
+      "price_available": true
+    },
+    {
+      "part_name": "Hood",
+      "base_price": 1200,
+      "severity": "Medium",
+      "multiplier": 0.6,
+      "estimated_repair_cost": 720.0,
+      "price_available": true
+    },
+    {
+      "part_name": "License-plate",
+      "base_price": 25,
+      "severity": "High",
+      "multiplier": 0.9,
+      "estimated_repair_cost": 22.5,
+      "price_available": true
+    },
+    {
+      "part_name": "Front-wheel",
+      "base_price": 800,
+      "severity": "Medium",
+      "multiplier": 0.6,
+      "estimated_repair_cost": 480.0,
+      "price_available": true
+    },
+    {
+      "part_name": "Headlight",
+      "base_price": 350,
+      "severity": "Low",
+      "multiplier": 0.25,
+      "estimated_repair_cost": 87.5,
+      "price_available": true
+    }
+  ],
+  "total_estimated_repair_cost": 2195.0
+}
