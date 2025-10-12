@@ -7,3 +7,4 @@ archive/
 damage-det/model_final.pth
 FraudDetection/model_final.pth
 .env
+*.pth
