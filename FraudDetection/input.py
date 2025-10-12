@@ -59,7 +59,7 @@ class FraudDetectionPipeline:
             self.damage_detector = CombinedDamageDetector(
                 parts_model_path="../damage-det/model_parts.pth",
                 damage_model_path="../damage-det/model_damage.pth",
-                confidence_threshold=0.5,
+                confidence_threshold=0.7,  # Increased to 70% to reduce false positives
                 verbose=True
             )
         except Exception as e:
@@ -86,6 +86,86 @@ class FraudDetectionPipeline:
         os.makedirs(images_path, exist_ok=True)
         
         return submission_path, images_path
+    
+    def _calculate_confidence_score(self, result):
+        """
+        Calculate overall confidence claim score (0-100) based on all validation checks
+        
+        Higher score = Higher confidence the claim is legitimate
+        Lower score = Higher suspicion of fraud
+        
+        Scoring breakdown:
+        - AI Check: 25 points (if passed)
+        - Tampering Check: 25 points (if passed)
+        - Description Match: 25 points (if passed, partial match = 15 points)
+        - Duplication Check: 25 points (if passed)
+        
+        Returns:
+            int: Confidence score from 0-100
+        """
+        score = 0
+        
+        # AI Check (25 points)
+        if result.get('ai_check'):
+            ai_check = result['ai_check']
+            if not ai_check.get('is_ai_generated', True):
+                # Not AI-generated = full points
+                score += 25
+            else:
+                # Deduct based on AI probability
+                ai_prob = ai_check.get('ai_percentage', 100)
+                score += max(0, int(25 * (1 - ai_prob / 100)))
+        elif result.get('ai_check') is None:
+            # If check was skipped, give benefit of doubt (partial points)
+            score += 15
+        
+        # Tampering Check (25 points)
+        if result.get('tampering_check'):
+            tampering = result['tampering_check']
+            if not tampering.get('is_tampered', True):
+                # Not tampered = full points
+                score += 25
+            else:
+                # Deduct based on tampering score
+                tamper_score = tampering.get('tampering_score', 100)
+                score += max(0, int(25 * (1 - tamper_score / 100)))
+        elif result.get('tampering_check') is None:
+            # If check was skipped, give benefit of doubt
+            score += 15
+        
+        # Description Match (25 points)
+        if result.get('description_check'):
+            desc_check = result['description_check']
+            if desc_check.get('matches', False):
+                match_type = desc_check.get('match_type', 'no_match')
+                if match_type == 'strong_match':
+                    score += 25
+                elif match_type == 'partial_match':
+                    score += 15
+                else:
+                    score += 10
+            else:
+                # No match = 0 points
+                pass
+        elif result.get('description_check') is None:
+            # If check was skipped, give benefit of doubt
+            score += 15
+        
+        # Duplication Check (25 points)
+        if result.get('duplication_check'):
+            dup_check = result['duplication_check']
+            if not dup_check.get('is_duplicate', True):
+                # Not a duplicate = full points
+                score += 25
+            else:
+                # Is duplicate = 0 points
+                pass
+        elif result.get('duplication_check') is None:
+            # If check was skipped, give benefit of doubt
+            score += 15
+        
+        # Ensure score is within 0-100 range
+        return max(0, min(100, score))
     
     def _convert_to_serializable(self, obj):
         """Convert numpy types to native Python types for JSON serialization"""
@@ -198,7 +278,9 @@ class FraudDetectionPipeline:
                 'tampering_check': None,
                 'description_check': None,
                 'duplication_check': None,
-                'status': 'UNKNOWN'
+                'damage_analysis': None,
+                'status': 'UNKNOWN',
+                'confidence_score': 0  # 0-100 confidence claim score
             }
             
             # STEP 1: AI Detection
@@ -341,6 +423,17 @@ class FraudDetectionPipeline:
                             for dmg in part['damages']:
                                 report.append(f"     - {dmg['damage_type']}: {dmg['overlap_ratio']:.1%} coverage")
                     
+                    # Show repair cost estimates
+                    if damage_result.get('price_estimates') and damage_result.get('total_estimated_repair_cost', 0) > 0:
+                        report.append(f"\nREPAIR COST ESTIMATES:")
+                        report.append("-" * 70)
+                        for estimate in damage_result['price_estimates']:
+                            if estimate.get('estimated_repair_cost', 0) > 0:
+                                report.append(f"  {estimate['part_name']}: ₹{estimate['estimated_repair_cost']:,.2f}")
+                                report.append(f"     Severity: {estimate['severity']} | Base Price: ₹{estimate['base_price']:,.2f}")
+                        report.append("-" * 70)
+                        report.append(f"  TOTAL ESTIMATED COST: ₹{damage_result['total_estimated_repair_cost']:,.2f}")
+                    
                     # Save visualizations (now returns 3 separate images)
                     vis_base = f"image_{image_num}_damage_analysis"
                     vis_path = os.path.join(images_path, vis_base)
@@ -353,6 +446,14 @@ class FraudDetectionPipeline:
                     report.append(f"Error: {damage_result['error']}")
             else:
                 report.append("Damage Detector not available - SKIPPED")
+            
+            # Calculate confidence claim score (0-100)
+            confidence_score = self._calculate_confidence_score(result)
+            result['confidence_score'] = confidence_score
+            
+            report.append(f"\n{'='*70}")
+            report.append(f"CONFIDENCE CLAIM SCORE: {confidence_score}/100")
+            report.append(f"{'='*70}")
             
             all_results.append(result)
         
@@ -407,13 +508,75 @@ def process_gradio_submission(images, descriptions, customer_name, car_details):
         # Run the full pipeline
         report_text = pipeline.process_submission(images, descriptions, customer_name, car_details)
         
+        # Extract confidence scores from the report
+        confidence_scores = []
+        for line in report_text.split('\n'):
+            if "CONFIDENCE CLAIM SCORE:" in line:
+                # Extract score (format: "CONFIDENCE CLAIM SCORE: XX/100")
+                try:
+                    score = int(line.split("CONFIDENCE CLAIM SCORE:")[1].split("/")[0].strip())
+                    confidence_scores.append(score)
+                except:
+                    pass
+        
+        # Calculate average confidence score
+        avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
+        
+        # Extract total repair costs from the report
+        total_repair_costs = []
+        for line in report_text.split('\n'):
+            if "TOTAL ESTIMATED COST: ₹" in line:
+                try:
+                    # Extract cost (format: "TOTAL ESTIMATED COST: ₹X,XXX.XX")
+                    cost_str = line.split("TOTAL ESTIMATED COST: ₹")[1].strip()
+                    cost = float(cost_str.replace(',', ''))
+                    total_repair_costs.append(cost)
+                except:
+                    pass
+        
+        # Calculate overall total repair cost
+        overall_repair_cost = sum(total_repair_costs) if total_repair_costs else 0
+        
         # Extract overall status
         overall_passed = "OVERALL STATUS: PASSED" in report_text
+        
+        # Format confidence score display with color coding
+        if avg_confidence >= 80:
+            confidence_color = "🟢"
+            confidence_status = "HIGH CONFIDENCE"
+        elif avg_confidence >= 60:
+            confidence_color = "🟡"
+            confidence_status = "MEDIUM CONFIDENCE"
+        elif avg_confidence >= 40:
+            confidence_color = "🟠"
+            confidence_status = "LOW CONFIDENCE"
+        else:
+            confidence_color = "🔴"
+            confidence_status = "VERY LOW CONFIDENCE"
+        
+        # Build overall status with confidence score
+        overall_status_content = f"## {'✅ PASSED' if overall_passed else '❌ FAILED'}\n\n"
+        overall_status_content += f"# {confidence_color} CONFIDENCE CLAIM SCORE: {avg_confidence:.0f}/100\n"
+        overall_status_content += f"**Status:** {confidence_status}\n\n"
+        
+        # Add repair cost estimate if available
+        if overall_repair_cost > 0:
+            overall_status_content += f"# TOTAL REPAIR COST: ₹{overall_repair_cost:,.2f}\n\n"
+        
+        overall_status_content += "---\n\n"
+        overall_status_content += f"**Customer:** {customer_name}\n\n"
+        overall_status_content += f"**Car:** {car_details}\n\n"
+        overall_status_content += f"**Images Analyzed:** {len(images) if images else 0}\n\n"
+        
+        # Add per-image confidence breakdown if multiple images
+        if len(confidence_scores) > 1:
+            overall_status_content += "\n**Per-Image Scores:**\n"
+            for i, score in enumerate(confidence_scores, 1):
+                cost_info = f" | Cost: ₹{total_repair_costs[i-1]:,.2f}" if i-1 < len(total_repair_costs) and total_repair_costs[i-1] > 0 else ""
+                overall_status_content += f"- Image {i}: {score}/100{cost_info}\n"
+        
         overall_status_md = format_box(
-            f"## {'✅ PASSED' if overall_passed else '❌ FAILED'}\n\n"
-            f"**Customer:** {customer_name}\n\n"
-            f"**Car:** {car_details}\n\n"
-            f"**Images Analyzed:** {len(images) if images else 0}",
+            overall_status_content,
             "pass" if overall_passed else "fail"
         )
         
@@ -623,7 +786,28 @@ with gr.Blocks(title="Automotive Fraud Detection System", css="""
         2. Upload one or more images of car damage
         3. Provide descriptions for each image (comma or newline separated)
         4. Click "Analyze for Fraud" to process
-        5. Review the detailed report and damage analysis visualizations
+        5. Review the **Confidence Claim Score**, **Repair Cost Estimates**, and detailed report
+        
+        ### 📊 Confidence Claim Score (0-100):
+        - **🟢 80-100**: HIGH CONFIDENCE - Claim appears legitimate
+        - **🟡 60-79**: MEDIUM CONFIDENCE - Some concerns, review recommended
+        - **🟠 40-59**: LOW CONFIDENCE - Multiple red flags detected
+        - **🔴 0-39**: VERY LOW CONFIDENCE - High fraud risk
+        
+        The score is calculated based on:
+        - AI Generation Check (25 points)
+        - Tampering Detection (25 points)
+        - Description Matching (25 points)
+        - Duplication Check (25 points)
+        
+        ### 💰 Repair Cost Estimation:
+        - The system automatically estimates repair costs based on:
+          - **Detected car parts** (Front bumper, Hood, Door, etc.)
+          - **Damage severity** (Low, Medium, High)
+          - **Market-based part prices** (average replacement values)
+        - Cost estimates are shown for each damaged part
+        - **Total repair cost** is displayed in the summary
+        - Costs are calculated as: Base Part Price × Severity Multiplier
         
         ### 📝 Notes:
         - **Green boxes** = Passed validation ✅

@@ -46,11 +46,11 @@ class CombinedDamageDetector:
     # Severity thresholds based on damage-to-part area ratio
     SEVERITY_THRESHOLDS = {
         'Low': 0.15,      # < 15% of part area
-        'Medium': 0.35,   # 15-35% of part area
-        'High': 0.35      # > 35% of part area
+        'Medium': 0.50,   # 15-50% of part area (increased from 35%)
+        'High': 0.50      # > 50% of part area (increased from 35%)
     }
     
-    # Fixed base prices for car parts (in USD) - average market prices
+    # Fixed base prices for car parts (in INR) - average market prices
     PART_BASE_PRICES = {
         'Front-bumper': 800,
         'Back-bumper': 750,
@@ -316,9 +316,9 @@ class CombinedDamageDetector:
                     price_estimates.append(cost_info)
                     if cost_info['estimated_repair_cost'] > 0:
                         total_repair_cost += cost_info['estimated_repair_cost']
-                        print(f"  {part_analysis['part_name']}: ${cost_info['estimated_repair_cost']:.2f} ({part_analysis['severity']} severity)")
+                        print(f"  {part_analysis['part_name']}: ₹{cost_info['estimated_repair_cost']:.2f} ({part_analysis['severity']} severity)")
             
-            print(f"\nTotal estimated repair cost: ${total_repair_cost:.2f}")
+            print(f"\nTotal estimated repair cost: ₹{total_repair_cost:.2f}")
             
             # Compile results
             result = {
@@ -435,7 +435,7 @@ class CombinedDamageDetector:
         
         # Add cost summary
         if result.get('total_estimated_repair_cost', 0) > 0:
-            report.append(f"Total Estimated Repair Cost: ${result['total_estimated_repair_cost']:,.2f}")
+            report.append(f"Total Estimated Repair Cost: ₹{result['total_estimated_repair_cost']:,.2f}")
         report.append("")
         
         # Summary of detected damage types
@@ -474,8 +474,8 @@ class CombinedDamageDetector:
                 
                 # Display price estimate
                 if price_info and price_info['price_available']:
-                    report.append(f"   💰 Base Part Price: ${price_info['base_price']:,.2f}")
-                    report.append(f"   💰 Estimated Repair Cost: ${price_info['estimated_repair_cost']:,.2f}")
+                    report.append(f"   💰 Base Part Price: ₹{price_info['base_price']:,.2f}")
+                    report.append(f"   💰 Estimated Repair Cost: ₹{price_info['estimated_repair_cost']:,.2f}")
                     report.append(f"      (Based on {price_info['multiplier']:.0%} of part value for {price_info['severity']} severity)")
         
         if undamaged_parts:
@@ -493,8 +493,8 @@ class CombinedDamageDetector:
             
             if parts_with_prices:
                 for price_info in parts_with_prices:
-                    report.append(f"  {price_info['part_name']:.<40} ${price_info['estimated_repair_cost']:>10,.2f}")
-                report.append(f"  {'TOTAL ESTIMATED COST':.<40} ${result['total_estimated_repair_cost']:>10,.2f}")
+                    report.append(f"  {price_info['part_name']:.<40} ₹{price_info['estimated_repair_cost']:>10,.2f}")
+                report.append(f"  {'TOTAL ESTIMATED COST':.<40} ₹{result['total_estimated_repair_cost']:>10,.2f}")
         
         report.append("\n" + "=" * 70)
         
