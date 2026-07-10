@@ -88,14 +88,9 @@ httpx>=0.25.0
 websockets>=12.0
 
 # ----------------------------------------------------------------------------
-# Google Generative AI (Gemini for Description Matching)
+# OpenAI-compatible NVIDIA NIM API (for VLM Description Matching)
 # ----------------------------------------------------------------------------
-google-generativeai>=0.3.0
-google-ai-generativelanguage>=0.4.0
-google-api-core>=2.14.0
-google-auth>=2.23.0
-proto-plus>=1.22.0
-protobuf>=4.24.0
+openai>=1.0.0
 
 # ----------------------------------------------------------------------------
 # Image Metadata & EXIF
@@ -161,8 +156,8 @@ idna>=3.4
 # Post-Installation Steps
 # ============================================================================
 #
-# 1. Set up environment variables (.env file):
-#    GEMINI_API_KEY=your_gemini_api_key_here
+# 1. Set up environment variables (copy .env.example to .env):
+#    NVIDIA_API_KEY=your_nvidia_nim_api_key_here
 #
 # 2. Download model weights:
 #    - Place model_parts.pth in damage-det/ folder

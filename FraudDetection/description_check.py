@@ -1,12 +1,14 @@
 """
 Image-Description Matching Module
-Validates if image matches the provided description using Gemini AI
+Validates if image matches the provided description using NVIDIA NIM VLM
 """
 
 import os
 import json
+import base64
+import io
 from PIL import Image
-import google.generativeai as genai
+from openai import OpenAI
 from dotenv import load_dotenv
 
 
@@ -26,27 +28,31 @@ class DescriptionMatcher:
         "Paint chip": 4, "Missing part": 5, "Flaking": 6,
         "Corrosion": 7, "Cracked": 8
     }
-    
-    def __init__(self, api_key=None, model_name="gemini-2.0-flash-exp"):
-        """Initialize Gemini AI for image-description matching"""
+
+    def __init__(self, api_key=None, model_name=None, base_url=None):
+        """Initialize NVIDIA NIM VLM for image-description matching"""
         load_dotenv()
-        
+
         if api_key is None:
-            api_key = os.getenv("GEMINI_API_KEY")
-        
+            api_key = os.getenv("NVIDIA_API_KEY")
+        if model_name is None:
+            model_name = os.getenv("NVIDIA_NIM_MODEL", "meta/llama-3.2-11b-vision-instruct")
+        if base_url is None:
+            base_url = os.getenv("NVIDIA_NIM_BASE_URL", "https://api.build.nvidia.com/v1")
+
         if not api_key:
-            raise ValueError("GEMINI_API_KEY not found. Please set it in .env file or pass as argument.")
-        
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name)
-        print("Description matching model initialized!\n")
-    
+            raise ValueError("NVIDIA_API_KEY not found. Please set it in .env file or pass as argument.")
+
+        self.model_name = model_name
+        self.client = OpenAI(base_url=base_url, api_key=api_key)
+        print(f"Description matching model initialized using {self.model_name}!\n")
+
     def _parse_response(self, response_text):
-        """Parse Gemini's JSON response"""
+        """Parse JSON response from the VLM"""
         try:
             start = response_text.find('{')
             end = response_text.rfind('}') + 1
-            
+
             if start != -1 and end > start:
                 json_str = response_text[start:end]
                 return json.loads(json_str)
@@ -66,15 +72,21 @@ class DescriptionMatcher:
                 'DAMAGE_STATUS': 'Unclear',
                 'REASONING': response_text
             }
-    
+
+    def _image_to_base64(self, img):
+        """Convert PIL Image to base64 string"""
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
     def verify(self, image_path, description):
         """
         Verify if image matches the description
-        
+
         Args:
             image_path: Path to the car damage image
             description: Text description of the damage
-            
+
         Returns:
             dict: {
                 'matches': bool,
@@ -98,19 +110,19 @@ class DescriptionMatcher:
             'severity': 'Unknown',
             'manual_check_required': False
         }
-        
+
         if not os.path.exists(image_path):
             result['reasoning'] = f"Image not found: {image_path}"
             return result
-        
+
         try:
             # Load image
             img = Image.open(image_path)
-            
+
             # Build prompt
             car_parts_list = "\n".join([f"   {name}: {idx}" for name, idx in self.CAR_PARTS.items()])
             damage_types_list = "\n".join([f"   {name}: {idx}" for name, idx in self.DAMAGE_TYPES.items()])
-            
+
             prompt_text = (
                 "AI-Powered Multimodal Claims Assessment\n"
                 "You are a highly-skilled automotive insurance claims assessor. Analyze the image and description to determine if they match.\n\n"
@@ -130,59 +142,79 @@ class DescriptionMatcher:
                 "8. REASONING: Detailed explanation\n"
                 "9. SEVERITY: ['Low', 'Medium', 'High']"
             )
-            
-            prompt_parts = [{"text": prompt_text}, img]
-            
-            # Generate response
-            response = self.model.generate_content(prompt_parts)
-            
+
+            # Convert image to base64
+            img_base64 = self._image_to_base64(img)
+
+            # Generate response via NVIDIA NIM
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt_text},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{img_base64}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=1024
+            )
+
+            response_text = response.choices[0].message.content
+
             # Parse response
-            parsed = self._parse_response(response.text)
-            
+            parsed = self._parse_response(response_text)
+
             # Map to result format
             match_type = parsed.get('MATCH', 'No Match')
-            
-            # Handle if match_type is a list (Gemini sometimes returns lists)
+
+            # Handle if match_type is a list
             if isinstance(match_type, list):
                 match_type = match_type[0] if match_type else 'No Match'
-            
+
             result['match_type'] = match_type
-            
+
             # Check if it's an exact match
             is_exact_match = 'exact' in str(match_type).lower()
             is_partial_match = 'partial' in str(match_type).lower()
-            
+
             # Check if it's a match (Exact or Partial)
             result['matches'] = is_exact_match or is_partial_match
-            
+
             # Flag for manual check if partial match
             result['manual_check_required'] = is_partial_match
-            
+
             result['confidence'] = parsed.get('CONFIDENCE', 0)
-            
+
             # Handle car_part (could be list or string)
             car_part = parsed.get('CAR_PART', 'Unknown')
             result['car_part'] = car_part[0] if isinstance(car_part, list) else car_part
-            
+
             # Handle damage_status (could be list or string)
             damage_status = parsed.get('DAMAGE_STATUS', 'Unknown')
             result['damage_status'] = damage_status[0] if isinstance(damage_status, list) else damage_status
-            
+
             # Handle damage_type (could be list or string)
             damage_type = parsed.get('DAMAGE_TYPE', 'Unknown')
             result['damage_type'] = damage_type[0] if isinstance(damage_type, list) else damage_type
-            
+
             result['reasoning'] = parsed.get('REASONING', 'No reasoning provided')
-            
+
             # Handle severity (could be list or string)
             severity = parsed.get('SEVERITY', 'Unknown')
             result['severity'] = severity[0] if isinstance(severity, list) else severity
-            
-            result['raw_response'] = response.text
-            
+
+            result['raw_response'] = response_text
+
         except Exception as e:
             result['reasoning'] = f"Error during verification: {str(e)}"
-        
+
         return result
 
 

@@ -4,12 +4,35 @@ Main entry point with Gradio web interface
 """
 
 import os
+import sys
 import json
 import shutil
 from datetime import datetime
 from pathlib import Path
 import gradio as gr
 import numpy as np
+
+# Enforce CUDA-capable GPU before anything else.
+# CPU fallback is intentionally disabled: the pipeline runs multiple heavy
+# models (Detectron2, HuggingFace, CLIP) and CPU inference is far too slow
+# for an interactive Gradio app.
+try:
+    import torch
+    if not torch.cuda.is_available():
+        raise RuntimeError(
+            "CUDA-capable GPU not detected.\n"
+            "This application requires a CUDA-capable NVIDIA GPU to run.\n"
+            "Install a PyTorch build with CUDA support:\n"
+            "  pip install torch torchvision --extra-index-url https://download.pytorch.org/whl/cu124\n"
+            "Also ensure NVIDIA drivers are installed (run `nvidia-smi` to verify)."
+        )
+    print(f"[GPU CHECK] CUDA available: {torch.cuda.get_device_name(0)}")
+except RuntimeError as e:
+    print("=" * 60)
+    print("FATAL: GPU requirement not satisfied")
+    print("=" * 60)
+    print(str(e))
+    sys.exit(1)
 
 # Import detection modules
 from ai_detector import AIImageDetector
