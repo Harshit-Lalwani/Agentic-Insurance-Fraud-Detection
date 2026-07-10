@@ -70,7 +70,7 @@ The **Automotive Fraud Detection System** is an advanced AI-powered solution des
 - **Action**: Rejects images with tampering score > 60%
 
 #### 3. 📝 Description Matching
-- **Model**: Google Gemini 2.0 Flash
+- **Model**: NVIDIA NIM — Llama 3.2 Vision 11B (OpenAI-compatible API)
 - **Method**: Vision-Language Model (VLM) analysis
 - **Validation**:
   - Car part identification (21 part categories)
@@ -236,7 +236,7 @@ Quantitative fraud risk assessment (0-100):
 - **Object Detection**: Detectron2 (Mask R-CNN, ResNet-50 FPN)
 - **AI Detection**: Hugging Face Transformers (ViT-based models)
 - **Tampering**: TensorFlow/Keras (DenseNet121)
-- **Description**: Google Gemini 2.0 Flash Exp
+- **Description**: NVIDIA NIM VLM (Llama 3.2 Vision 11B)
 - **Duplication**: OpenAI CLIP (ViT-B/32) + ImageHash
 
 ---
@@ -334,18 +334,22 @@ nano .env
 Add the following content:
 
 ```env
-# Google Gemini API Key (REQUIRED)
-GEMINI_API_KEY=your_gemini_api_key_here
+# NVIDIA NIM API Key (REQUIRED)
+NVIDIA_API_KEY=your_nvidia_nim_api_key_here
+
+# Customize NIM model/base URL (optional)
+NVIDIA_NIM_BASE_URL=https://api.build.nvidia.com/v1
+NVIDIA_NIM_MODEL=meta/llama-3.2-11b-vision-instruct
 
 # Optional Configuration
 MODEL_CONFIDENCE_THRESHOLD=0.7
 DAMAGE_SEVERITY_HIGH_THRESHOLD=0.5
 ```
 
-**Get Your Gemini API Key**:
-1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click "Create API Key"
+**Get Your NVIDIA NIM API Key**:
+1. Visit [build.nvidia.com](https://build.nvidia.com)
+2. Sign in with your NVIDIA account
+3. Navigate to any VLM model page and click "Get API Key"
 4. Copy and paste into `.env` file
 
 #### 2. Model Files
@@ -458,12 +462,11 @@ pip install -r requirements.txt
 ```
 
 ### 3. Setup Environment Variables
-Create a `.env` file in the FraudDetection directory:
+Copy the template and fill in your API key:
 ```bash
-GEMINI_API_KEY=your_gemini_api_key_here
+cp .env.example .env
+# Edit .env with your NVIDIA_API_KEY from https://build.nvidia.com
 ```
-
-Get your Gemini API key from: https://makersuite.google.com/app/apikey
 
 ### 4. Download Model Files
 Ensure these model files are in place:
@@ -628,10 +631,11 @@ result = matcher.verify("image.jpg", "damaged bumper")
 - Check if model files exist in correct paths
 - For Keras compatibility issues: `pip install tf-keras`
 
-### Gemini API Errors
-- Verify API key in `.env` file
-- Check API quota: https://console.cloud.google.com/
+### NVIDIA NIM API Errors
+- Verify `NVIDIA_API_KEY` in `.env` file
+- Get a key from https://build.nvidia.com
 - Ensure internet connection for API calls
+- The default model is `meta/llama-3.2-11b-vision-instruct`; switch via `NVIDIA_NIM_MODEL` in `.env`
 
 ### Memory Issues
 - Process images one at a time
@@ -654,7 +658,7 @@ app.launch(server_port=7861)  # Use different port
 ## Security & Privacy
 
 - All data stored locally in `fraud_detection_data/`
-- Images sent to Gemini API for description matching only
+- Images sent to NVIDIA NIM VLM API for description matching only
 - No data shared with third parties
 ---
 
@@ -665,17 +669,11 @@ app.launch(server_port=7861)  # Use different port
 #### Quick Start
 
 ```bash
-# Navigate to project directory
-cd Megathon25/FraudDetection
-
-# Make start script executable (first time only)
-chmod +x start.sh
-
-# Start the application
-./start.sh
+# Activate virtual environment and run
+source /root/Megathon25/venv/bin/activate && python /root/Megathon25/FraudDetection/input.py
 ```
 
-The web interface will automatically open in your default browser at `http://localhost:7860`
+The web interface will be available at `http://localhost:7860`
 
 #### Manual Start
 
@@ -746,13 +744,17 @@ Status: HIGH CONFIDENCE
 ```
 FraudDetection/
 ├── input.py                    # Main Gradio interface & orchestration
-├── ai_detector.py              # AI-generated image detection
-├── tampering_check.py          # ELA & metadata tampering detection
-├── description_check.py        # Gemini-powered description matching
+├── ai_detector.py              # AI-generated image detection (HuggingFace)
+├── tampering_check.py          # ELA & metadata tampering detection (TensorFlow)
+├── description_check.py        # NVIDIA NIM VLM description matching
 ├── duplication_check.py        # Perceptual hash & CLIP duplication
-├── combined_damage_detector.py # Car parts & damage detection
-├── car_parts_detector.py       # Detectron2 parts detector
-└── fraud_detection_data/       # Submission database (auto-created)
+├── combined_damage_detector.py # Detectron2 damage orchestrator
+├── car_parts_detector.py       # Detectron2 parts/damage inference
+├── .env.example                # Environment variable template
+├── requirements.txt            # Python dependencies
+└── Image-Tampering-Detection-using-ELA-and-Metadata-Analysis/
+    ├── ELA_Training/model_ela.h5
+    └── WeatherCNNTraining/Weather_Model.h5
 ```
 
 ### Data Flow
@@ -791,7 +793,7 @@ graph TD
     
     B --> H[Hugging Face Transformers]
     C --> I[TensorFlow / Keras]
-    D --> J[Google Gemini API]
+    D --> J[NVIDIA NIM VLM API]
     E --> K[CLIP + ImageHash]
     F --> L[Detectron2]
     G --> L
@@ -857,7 +859,7 @@ Detects image tampering using ELA and metadata validation.
 
 ### DescriptionMatcher Class
 
-Validates image-description consistency using Gemini AI.
+Validates image-description consistency using NVIDIA NIM VLM (Llama 3.2 Vision).
 
 #### Methods
 
@@ -925,12 +927,9 @@ Megathon25/
 │   ├── car_parts_detector.py                 # Car parts detector (345 lines)
 │   │
 │   ├── requirements.txt                      # Python dependencies
-│   ├── install.sh                            # Installation script
-│   ├── start.sh                              # Startup script
+│   ├── .env.example                          # Environment variable template
 │   ├── README.md                             # This file
-│   ├── .env                                  # Environment variables (create manually)
-│   │
-│   ├── venv/                                 # Virtual environment (created during setup)
+│   ├── .env                                  # Environment variables (create manually, gitignored)
 │   │
 │   ├── fraud_detection_data/                 # Submission database (auto-created)
 │   │   ├── John_Doe_20251012_025055/
@@ -1051,16 +1050,16 @@ pip install detectron2 -f \
   https://dl.fbaipublicfiles.com/detectron2/wheels/cu118/torch2.0/index.html
 ```
 
-#### Issue 3: Gemini API Key Error
+#### Issue 3: NVIDIA NIM API Key Error
 
-**Error**: `google.api_core.exceptions.PermissionDenied: 403`
+**Error**: `AuthenticationError: 401` from the NIM API
 
 **Solution**:
 ```bash
 # Verify API key in .env file
-cat .env | grep GEMINI_API_KEY
+cat .env | grep NVIDIA_API_KEY
 
-# Get new key from: https://makersuite.google.com/app/apikey
+# Get new key from: https://build.nvidia.com
 # Update .env file with valid key
 ```
 
@@ -1215,7 +1214,7 @@ SOFTWARE.
 - **Detectron2** - Object detection (Facebook AI Research)
 - **OpenAI CLIP** - Vision-language models
 - **Gradio** - Web interface framework
-- **Google Gemini** - Generative AI API
+- **NVIDIA NIM** - VLM inference API (Llama 3.2 Vision)
 
 ### Datasets & Pre-trained Models
 - **CASIA2.0** - Image tampering dataset (ELA training)
@@ -1283,7 +1282,7 @@ Submit feature requests via GitHub Issues with:
 ## 📊 Statistics
 
 - **Total Lines of Code**: ~2,600
-- **Number of Models**: 8 (AI x2, ELA, Weather, Gemini, CLIP, Parts, Damage)
+- **Number of Models**: 8 (AI x2, ELA, Weather, VLM, CLIP, Parts, Damage)
 - **Detection Stages**: 5
 - **Car Part Categories**: 21
 - **Damage Types**: 8

@@ -1,13 +1,10 @@
-/manit/photos_no_class/*
 */__pycache__/
 .vscode/
-geminitest/.env
-geminitest/venv
-archive/
-damage-det/model_final.pth
-FraudDetection/model_final.pth
 .env
 *.pth
 damage-det/*.pth
 FraudDetection/venv
 FraudDetection/fraud_detection_data
+FraudDetection/test_damage_output/
+FraudDetection/combined_analysis_output/
+fraud_detection_data/
