@@ -56,10 +56,11 @@ class FraudDetectionPipeline:
             print(f"Warning: AI Detector initialization failed: {e}")
             self.ai_detector = None
         
+        script_dir = os.path.dirname(os.path.abspath(__file__))
         try:
             self.tampering_detector = TamperingDetector(
-                ela_model_path="Image-Tampering-Detection-using-ELA-and-Metadata-Analysis/ELA_Training/model_ela.h5",
-                weather_model_path="Image-Tampering-Detection-using-ELA-and-Metadata-Analysis/WeatherCNNTraining/Weather_Model.h5"
+                ela_model_path=os.path.join(script_dir, "Image-Tampering-Detection-using-ELA-and-Metadata-Analysis/ELA_Training/model_ela.h5"),
+                weather_model_path=os.path.join(script_dir, "Image-Tampering-Detection-using-ELA-and-Metadata-Analysis/WeatherCNNTraining/Weather_Model.h5")
             )
         except Exception as e:
             print(f"Warning: Tampering Detector initialization failed: {e}")
@@ -80,8 +81,8 @@ class FraudDetectionPipeline:
         try:
             # Initialize Combined Damage Detector (Parts + Damage Classification)
             self.damage_detector = CombinedDamageDetector(
-                parts_model_path="../damage-det/model_parts.pth",
-                damage_model_path="../damage-det/model_damage.pth",
+                parts_model_path=os.path.join(script_dir, "../damage-det/model_parts.pth"),
+                damage_model_path=os.path.join(script_dir, "../damage-det/model_damage.pth"),
                 confidence_threshold=0.7,  # Increased to 70% to reduce false positives
                 verbose=True
             )
@@ -93,6 +94,7 @@ class FraudDetectionPipeline:
         self.base_dir = "fraud_detection_data"
         os.makedirs(self.base_dir, exist_ok=True)
         self._last_submission_path = None  # Track last submission for Gradio output
+        self._last_results = None  # Structured results for UI rendering
         
         print("=" * 60)
         print("SYSTEM INITIALIZED SUCCESSFULLY")
@@ -506,6 +508,9 @@ class FraudDetectionPipeline:
         # Save metadata
         self._save_metadata(submission_path, customer_name, car_details, desc_list, all_results)
         
+        # Store structured results for the Gradio UI layer
+        self._last_results = all_results
+        
         return "\n".join(report)
 
 
@@ -514,335 +519,322 @@ pipeline = FraudDetectionPipeline()
 
 
 def format_box(content, status="info"):
-    """Format content in a colored box based on status"""
-    box_class = {
-        "pass": "pass-box",
-        "fail": "fail-box",
-        "warning": "warning-box",
-        "info": "info-box"
-    }.get(status, "info-box")
-    
-    return f'<div class="{box_class}">\n\n{content}\n\n</div>'
+    """Wrap content in a styled status card"""
+    css_class = {
+        "pass": "result-pass",
+        "fail": "result-fail",
+        "warning": "result-warning",
+        "info": "result-info",
+    }.get(status, "result-info")
+    return f'<div class="{css_class}">\n\n{content}\n\n</div>'
 
 
 def process_gradio_submission(images, descriptions, customer_name, car_details):
-    """Wrapper function for Gradio interface - returns structured outputs for each component"""
+    """Renders structured outputs for each Gradio component from pipeline results"""
     try:
-        # Run the full pipeline
         report_text = pipeline.process_submission(images, descriptions, customer_name, car_details)
-        
-        # Extract confidence scores from the report
-        confidence_scores = []
-        for line in report_text.split('\n'):
-            if "CONFIDENCE CLAIM SCORE:" in line:
-                # Extract score (format: "CONFIDENCE CLAIM SCORE: XX/100")
-                try:
-                    score = int(line.split("CONFIDENCE CLAIM SCORE:")[1].split("/")[0].strip())
-                    confidence_scores.append(score)
-                except:
-                    pass
-        
-        # Calculate average confidence score
-        avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
-        
-        # Extract total repair costs from the report
-        total_repair_costs = []
-        for line in report_text.split('\n'):
-            if "TOTAL ESTIMATED COST: ₹" in line:
-                try:
-                    # Extract cost (format: "TOTAL ESTIMATED COST: ₹X,XXX.XX")
-                    cost_str = line.split("TOTAL ESTIMATED COST: ₹")[1].strip()
-                    cost = float(cost_str.replace(',', ''))
-                    total_repair_costs.append(cost)
-                except:
-                    pass
-        
-        # Calculate overall total repair cost
-        overall_repair_cost = sum(total_repair_costs) if total_repair_costs else 0
-        
-        # Extract overall status
+        all_results = getattr(pipeline, '_last_results', None) or []
+
+        if not all_results:
+            return format_box("No results generated. Please check your inputs.", "info"), "", "", "", "", "", None
+
         overall_passed = "OVERALL STATUS: PASSED" in report_text
-        
-        # Format confidence score display with color coding
-        if avg_confidence >= 80:
-            confidence_color = "🟢"
-            confidence_status = "HIGH CONFIDENCE"
-        elif avg_confidence >= 60:
-            confidence_color = "🟡"
-            confidence_status = "MEDIUM CONFIDENCE"
-        elif avg_confidence >= 40:
-            confidence_color = "🟠"
-            confidence_status = "LOW CONFIDENCE"
+
+        # Confidence score
+        scores = [r.get('confidence_score', 0) for r in all_results]
+        avg_score = sum(scores) / len(scores) if scores else 0
+        filled = round(avg_score / 10)
+        bar = "\u2588" * filled + "\u2591" * (10 - filled)
+
+        if avg_score >= 80:
+            conf_label = "High Confidence"
+        elif avg_score >= 60:
+            conf_label = "Medium Confidence"
+        elif avg_score >= 40:
+            conf_label = "Low Confidence"
         else:
-            confidence_color = "🔴"
-            confidence_status = "VERY LOW CONFIDENCE"
-        
-        # Build overall status with confidence score
-        overall_status_content = f"## {'✅ PASSED' if overall_passed else '❌ FAILED'}\n\n"
-        overall_status_content += f"# {confidence_color} CONFIDENCE CLAIM SCORE: {avg_confidence:.0f}/100\n"
-        overall_status_content += f"**Status:** {confidence_status}\n\n"
-        
-        # Add repair cost estimate if available
-        if overall_repair_cost > 0:
-            overall_status_content += f"# TOTAL REPAIR COST: ₹{overall_repair_cost:,.2f}\n\n"
-        
-        overall_status_content += "---\n\n"
-        overall_status_content += f"**Customer:** {customer_name}\n\n"
-        overall_status_content += f"**Car:** {car_details}\n\n"
-        overall_status_content += f"**Images Analyzed:** {len(images) if images else 0}\n\n"
-        
-        # Add per-image confidence breakdown if multiple images
-        if len(confidence_scores) > 1:
-            overall_status_content += "\n**Per-Image Scores:**\n"
-            for i, score in enumerate(confidence_scores, 1):
-                cost_info = f" | Cost: ₹{total_repair_costs[i-1]:,.2f}" if i-1 < len(total_repair_costs) and total_repair_costs[i-1] > 0 else ""
-                overall_status_content += f"- Image {i}: {score}/100{cost_info}\n"
-        
-        overall_status_md = format_box(
-            overall_status_content,
-            "pass" if overall_passed else "fail"
+            conf_label = "Very Low Confidence"
+
+        total_repair = sum(
+            (r.get('damage_analysis') or {}).get('total_estimated_repair_cost', 0) or 0
+            for r in all_results
         )
-        
-        # Split report by image sections
-        image_sections = []
-        lines = report_text.split('\n')
-        current_image_section = []
-        
-        for line in lines:
-            if line.startswith("IMAGE ") and "/" in line and current_image_section:
-                image_sections.append('\n'.join(current_image_section))
-                current_image_section = [line]
+
+        verdict = "CLAIM PASSED" if overall_passed else "CLAIM FAILED"
+        verdict_detail = (
+            "No fraud indicators detected."
+            if overall_passed
+            else "Fraud indicators detected — manual review required."
+        )
+
+        summary_rows = [
+            f"| Customer | {customer_name} |",
+            f"| Vehicle | {car_details} |",
+            f"| Images Analyzed | {len(all_results)} |",
+        ]
+        if total_repair > 0:
+            summary_rows.append(f"| Estimated Repair Cost | \u20b9{total_repair:,.0f} |")
+        table = "\n".join(summary_rows)
+
+        per_image = ""
+        if len(scores) > 1:
+            lines = "\n".join(f"- Image {i + 1}: {s}/100" for i, s in enumerate(scores))
+            per_image = f"\n\n**Per-image scores:**\n{lines}"
+
+        overall_content = (
+            f"## {verdict}\n\n"
+            f"{verdict_detail}\n\n"
+            f"**Confidence Score: {avg_score:.0f} / 100**  \n"
+            f"`{bar}` {conf_label}\n\n"
+            f"---\n\n"
+            f"| | |\n|---|---|\n{table}"
+            f"{per_image}"
+        )
+        overall_md = format_box(overall_content, "pass" if overall_passed else "fail")
+
+        # --- Per-check renderers ---
+        def render_ai(result, n):
+            ai = result.get('ai_check')
+            if not ai:
+                return format_box(f"**Image {n}**\n\nCheck not available.", "info")
+            failed = ai.get('is_ai_generated') and ai.get('confidence') == 'High'
+            verdict_tag = "FAIL" if failed else "PASS"
+            return format_box(
+                f"**Image {n}** &nbsp;&nbsp; `{verdict_tag}`\n\n"
+                f"| Field | Value |\n|---|---|\n"
+                f"| AI Probability | {ai.get('ai_percentage', 0):.1f}% |\n"
+                f"| Verdict | {ai.get('verdict', '\u2014')} |\n"
+                f"| Confidence | {ai.get('confidence', '\u2014')} |",
+                "fail" if failed else "pass",
+            )
+
+        def render_tampering(result, n):
+            t = result.get('tampering_check')
+            if not t:
+                return format_box(f"**Image {n}**\n\nCheck not available.", "info")
+            failed = t.get('is_tampered') and (t.get('tampering_score', 0) > 60)
+            verdict_tag = "FAIL" if failed else "PASS"
+            details = ' \u00b7 '.join((t.get('details') or [])[:2])
+            body = (
+                f"**Image {n}** &nbsp;&nbsp; `{verdict_tag}`\n\n"
+                f"| Field | Value |\n|---|---|\n"
+                f"| Tampering Score | {t.get('tampering_score', 0):.1f}% |\n"
+                f"| ELA Prediction | {t.get('ela_prediction') or '\u2014'} |\n"
+                f"| Confidence | {t.get('confidence', '\u2014')} |"
+            )
+            if details:
+                body += f"\n\n*{details}*"
+            return format_box(body, "fail" if failed else "pass")
+
+        def render_description(result, n):
+            d = result.get('description_check')
+            if not d:
+                return format_box(f"**Image {n}**\n\nCheck not available.", "info")
+            manual = d.get('manual_check_required', False)
+            if manual:
+                status, verdict_tag = "warning", "REVIEW"
+            elif d.get('matches'):
+                status, verdict_tag = "pass", "PASS"
             else:
-                current_image_section.append(line)
-        
-        if current_image_section:
-            image_sections.append('\n'.join(current_image_section))
-        
-        # Extract results for each check type, separating by image
-        ai_check_parts = []
-        tampering_parts = []
-        desc_parts = []
-        dup_parts = []
-        damage_parts = []
-        
-        for idx, section in enumerate(image_sections):
-            image_num = idx + 1
-            
-            # Extract AI Check for this image
-            if "[STEP 1/5] AI GENERATION CHECK" in section:
-                ai_start = section.find("[STEP 1/5] AI GENERATION CHECK")
-                ai_end = section.find("[STEP 2/5]", ai_start)
-                ai_section = section[ai_start:ai_end] if ai_end > 0 else section[ai_start:ai_start+500]
-                
-                ai_passed = "Passed AI check" in ai_section or "SKIPPED" in ai_section
-                ai_status = "pass" if ai_passed else ("fail" if "FRAUD DETECTED" in ai_section else "info")
-                ai_check_parts.append(format_box(f"**Image {image_num}**\n\n{ai_section}", ai_status))
-            
-            # Extract Tampering Check for this image
-            if "[STEP 2/5] TAMPERING CHECK" in section:
-                tmp_start = section.find("[STEP 2/5] TAMPERING CHECK")
-                tmp_end = section.find("[STEP 3/5]", tmp_start)
-                tmp_section = section[tmp_start:tmp_end] if tmp_end > 0 else section[tmp_start:tmp_start+500]
-                
-                tmp_passed = "Passed tampering check" in tmp_section or "SKIPPED" in tmp_section
-                tmp_status = "pass" if tmp_passed else ("fail" if "FRAUD DETECTED" in tmp_section else "info")
-                tampering_parts.append(format_box(f"**Image {image_num}**\n\n{tmp_section}", tmp_status))
-            
-            # Extract Description Matching for this image
-            if "[STEP 3/5] DESCRIPTION MATCHING" in section:
-                desc_start = section.find("[STEP 3/5] DESCRIPTION MATCHING")
-                desc_end = section.find("[STEP 4/5]", desc_start)
-                desc_section = section[desc_start:desc_end] if desc_end > 0 else section[desc_start:desc_start+500]
-                
-                desc_passed = "Passed description check" in desc_section or "SKIPPED" in desc_section
-                desc_warning = "WARNING: Manual check is required" in desc_section
-                desc_status = "warning" if desc_warning else ("pass" if desc_passed else ("fail" if "FRAUD DETECTED" in desc_section else "info"))
-                desc_parts.append(format_box(f"**Image {image_num}**\n\n{desc_section}", desc_status))
-            
-            # Extract Duplication Check for this image
-            if "[STEP 4/5] DUPLICATION CHECK" in section:
-                dup_start = section.find("[STEP 4/5] DUPLICATION CHECK")
-                dup_end = section.find("[STEP 5/5]", dup_start)
-                dup_section = section[dup_start:dup_end] if dup_end > 0 else section[dup_start:dup_start+500]
-                
-                dup_passed = "No duplicates found" in dup_section or "SKIPPED" in dup_section
-                dup_status = "pass" if dup_passed else ("fail" if "DUPLICATE FOUND" in dup_section else "info")
-                dup_parts.append(format_box(f"**Image {image_num}**\n\n{dup_section}", dup_status))
-            
-            # Extract Damage Analysis for this image
-            if "[STEP 5/5] PART DETECTION & DAMAGE CLASSIFICATION" in section:
-                dmg_start = section.find("[STEP 5/5] PART DETECTION & DAMAGE CLASSIFICATION")
-                dmg_end = section.find("FINAL VERDICT", dmg_start)
-                if dmg_end == -1:
-                    dmg_end = section.find("\n\n\n", dmg_start)
-                dmg_section = section[dmg_start:dmg_end] if dmg_end > 0 else section[dmg_start:]
-                
-                # Check if damage analysis was skipped or had errors
-                if "SKIPPED" in dmg_section or "not available" in dmg_section:
-                    dmg_status = "info"
-                elif "Error:" in dmg_section:
-                    dmg_status = "fail"
-                else:
-                    # Successful analysis - show as pass (green) regardless of damage found
-                    # The severity is informational, not a pass/fail criterion
-                    dmg_status = "pass"
-                
-                damage_parts.append(format_box(f"**Image {image_num}**\n\n{dmg_section}", dmg_status))
-        
-        # Combine all parts with proper formatting
-        ai_check_md = f"### 🤖 AI Generation Check\n\n" + "\n\n".join(ai_check_parts) if ai_check_parts else "No AI check performed"
-        tampering_md = f"### � Tampering Check\n\n" + "\n\n".join(tampering_parts) if tampering_parts else "No tampering check performed"
-        desc_md = f"### 📝 Description Matching\n\n" + "\n\n".join(desc_parts) if desc_parts else "No description check performed"
-        dup_md = f"### 🔄 Duplication Check\n\n" + "\n\n".join(dup_parts) if dup_parts else "No duplication check performed"
-        damage_md = f"### 🔧 Damage Analysis\n\n" + "\n\n".join(damage_parts) if damage_parts else "No damage analysis performed"
-        
-        # Collect visualization images (now 3 per image: original, parts, damage)
+                status, verdict_tag = "fail", "FAIL"
+            raw_reason = d.get('reasoning') or ''
+            # Escape any leading/trailing asterisks that could break markdown rendering
+            reasoning = raw_reason.strip()
+            body = (
+                f"**Image {n}** &nbsp;&nbsp; `{verdict_tag}`\n\n"
+                f"| Field | Value |\n|---|---|\n"
+                f"| Match Type | {d.get('match_type', '\u2014')} |\n"
+                f"| Confidence | {d.get('confidence', 0):.2f} |\n"
+                f"| Car Part | {d.get('car_part', '\u2014')} |\n"
+                f"| Damage Status | {d.get('damage_status', '\u2014')} |"
+            )
+            if reasoning:
+                body += f"\n\n**Reasoning**\n\n{reasoning}"
+            return format_box(body, status)
+
+
+        def render_duplication(result, n):
+            dup = result.get('duplication_check')
+            if not dup:
+                return format_box(f"**Image {n}**\n\nCheck not available.", "info")
+            is_dup = dup.get('is_duplicate', False)
+            verdict_tag = "FAIL" if is_dup else "PASS"
+            det = dup.get('details', {})
+            extra = ""
+            if is_dup:
+                extra = (
+                    f"\n| Matched File | {os.path.basename(det.get('duplicate_of', ''))} |"
+                    f"\n| Similarity | {det.get('similarity_score', 0):.1%} |"
+                    f"\n| Method | {det.get('method_used', '').upper()} |"
+                )
+            return format_box(
+                f"**Image {n}** &nbsp;&nbsp; `{verdict_tag}`\n\n"
+                f"| Field | Value |\n|---|---|\n"
+                f"| Duplicate | {'Yes' if is_dup else 'No'} |\n"
+                f"| Images in Database | {det.get('total_images_checked', 0)} |"
+                + extra,
+                "fail" if is_dup else "pass",
+            )
+
+        def render_damage(result, n):
+            dmg = result.get('damage_analysis')
+            if not dmg:
+                return format_box(f"**Image {n}**\n\nCheck not available.", "info")
+            if 'error' in dmg:
+                return format_box(f"**Image {n}** &nbsp;&nbsp; `ERROR`\n\n{dmg['error']}", "fail")
+            damaged = [p for p in dmg.get('damage_analysis', []) if p.get('is_damaged')]
+            parts_lines = "\n".join(
+                f"- {p['part_name']} \u2014 {p['severity']} severity" for p in damaged
+            )
+            cost = dmg.get('total_estimated_repair_cost', 0) or 0
+            body = (
+                f"**Image {n}** &nbsp;&nbsp; `COMPLETE`\n\n"
+                f"| Field | Value |\n|---|---|\n"
+                f"| Parts Detected | {dmg.get('num_parts', 0)} |\n"
+                f"| Damage Types | {dmg.get('num_damage', 0)} |\n"
+                f"| Overall Severity | {dmg.get('overall_severity', 'None')} |"
+            )
+            if cost > 0:
+                body += f"\n| Repair Estimate | \u20b9{cost:,.0f} |"
+            if parts_lines:
+                body += f"\n\n**Damaged Parts:**\n{parts_lines}"
+            return format_box(body, "pass")
+
+        ai_parts = [render_ai(r, i + 1) for i, r in enumerate(all_results)]
+        tmp_parts = [render_tampering(r, i + 1) for i, r in enumerate(all_results)]
+        desc_parts = [render_description(r, i + 1) for i, r in enumerate(all_results)]
+        dup_parts = [render_duplication(r, i + 1) for i, r in enumerate(all_results)]
+        dmg_parts = [render_damage(r, i + 1) for i, r in enumerate(all_results)]
+
+        ai_md = "**AI Generation Check**\n\n" + "\n\n".join(ai_parts)
+        tmp_md = "**Tampering Detection**\n\n" + "\n\n".join(tmp_parts)
+        desc_md = "**Description Matching**\n\n" + "\n\n".join(desc_parts)
+        dup_md = "**Duplication Check**\n\n" + "\n\n".join(dup_parts)
+        dmg_md = "**Damage Analysis**\n\n" + "\n\n".join(dmg_parts)
+
         vis_images = []
-        if hasattr(pipeline, '_last_submission_path') and pipeline._last_submission_path:
+        if getattr(pipeline, '_last_submission_path', None):
             images_dir = os.path.join(pipeline._last_submission_path, "images")
             if os.path.exists(images_dir):
                 for file in sorted(os.listdir(images_dir)):
-                    # Collect all three types: original, parts, and damage visualizations
                     if file.endswith(("_original.jpg", "_parts.jpg", "_damage.jpg")):
                         vis_images.append(os.path.join(images_dir, file))
-        
-        return (
-            overall_status_md,
-            ai_check_md,
-            tampering_md,
-            desc_md,
-            dup_md,
-            damage_md,
-            vis_images if vis_images else None
-        )
-        
+
+        return overall_md, ai_md, tmp_md, desc_md, dup_md, dmg_md, vis_images or None
+
     except Exception as e:
-        error_msg = format_box(f"## ❌ ERROR\n\n{str(e)}\n\nPlease check your inputs and try again.", "fail")
-        return error_msg, "", "", "", "", "", None
+        err = format_box(f"**Error**\n\n{str(e)}", "fail")
+        return err, "", "", "", "", "", None
 
 
-# Create Gradio Interface
-with gr.Blocks(title="Automotive Fraud Detection System", css="""
-    .pass-box { background-color: #d4edda !important; border: 2px solid #28a745 !important; border-radius: 8px; padding: 15px; margin: 10px 0; }
-    .pass-box, .pass-box * { color: #000000 !important; }
-    .fail-box { background-color: #f8d7da !important; border: 2px solid #dc3545 !important; border-radius: 8px; padding: 15px; margin: 10px 0; }
-    .fail-box, .fail-box * { color: #000000 !important; }
-    .warning-box { background-color: #fff3cd !important; border: 2px solid #ffc107 !important; border-radius: 8px; padding: 15px; margin: 10px 0; }
-    .warning-box, .warning-box * { color: #000000 !important; }
-    .info-box { background-color: #d1ecf1 !important; border: 2px solid #17a2b8 !important; border-radius: 8px; padding: 15px; margin: 10px 0; }
-    .info-box, .info-box * { color: #000000 !important; }
-""") as app:
+
+_CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+* { font-family: 'Inter', sans-serif !important; }
+
+.result-pass {
+    background: #f0fdf4 !important;
+    border-left: 3px solid #16a34a !important;
+    border-radius: 6px; padding: 14px 18px; margin: 6px 0;
+    color: #14532d !important;
+}
+.result-fail {
+    background: #fef2f2 !important;
+    border-left: 3px solid #dc2626 !important;
+    border-radius: 6px; padding: 14px 18px; margin: 6px 0;
+    color: #7f1d1d !important;
+}
+.result-warning {
+    background: #fffbeb !important;
+    border-left: 3px solid #d97706 !important;
+    border-radius: 6px; padding: 14px 18px; margin: 6px 0;
+    color: #78350f !important;
+}
+.result-info {
+    background: #f8fafc !important;
+    border-left: 3px solid #64748b !important;
+    border-radius: 6px; padding: 14px 18px; margin: 6px 0;
+    color: #1e293b !important;
+}
+"""
+
+_THEME = gr.themes.Base(
+    primary_hue=gr.themes.colors.blue,
+    neutral_hue=gr.themes.colors.slate,
+    font=gr.themes.GoogleFont("Inter"),
+).set(
+    background_fill_primary="#ffffff",
+    background_fill_secondary="#f8fafc",
+    block_background_fill="#ffffff",
+    input_background_fill="#f8fafc",
+    body_text_color="#0f172a",
+    body_text_color_subdued="#475569",
+    block_label_text_color="#475569",
+    block_border_color="#e2e8f0",
+    border_color_primary="#e2e8f0",
+    button_primary_background_fill="#2563eb",
+    button_primary_background_fill_hover="#1d4ed8",
+    button_primary_text_color="#ffffff",
+    input_border_color="#cbd5e1",
+    block_shadow="0 1px 3px rgba(0,0,0,0.06)",
+)
+
+with gr.Blocks(title="SureClaim", theme=_THEME, css=_CSS) as app:
     gr.Markdown(
-        """
-        # 🚗 Automotive Fraud Detection System
-        
-        This system analyzes automotive damage images to detect potential fraud through:
-        1. **AI Generation Detection** - Identifies AI-generated fake images
-        2. **Tampering Detection** - Detects image manipulation using ELA analysis
-        3. **Description Matching** - Verifies images match the provided damage descriptions
-        4. **Duplication Check** - Detects previously submitted images
-        5. **Part Detection & Damage Classification** - Identifies car parts and damage types with severity
-        
-        ---
-        """
+        """# SureClaim
+        Computerised fraud detection for automotive insurance claims."""
     )
-    
+
     with gr.Row():
+        # ── Left column: inputs ───────────────────────────────────────────────
         with gr.Column(scale=1):
-            gr.Markdown("### 📋 Customer Information")
             customer_name = gr.Textbox(
                 label="Customer Name",
-                placeholder="Enter customer name",
-                value="John Doe"
+                placeholder="Full name",
+                value="John Doe",
             )
             car_details = gr.Textbox(
-                label="Car Details",
-                placeholder="e.g., Toyota Camry 2020, License Plate: ABC-1234",
-                lines=2,
-                value="Toyota Camry 2020"
+                label="Vehicle",
+                placeholder="Make, model, year",
+                value="Toyota Camry 2020",
             )
-            
-            gr.Markdown("### 📸 Upload Images")
             images = gr.File(
-                label="Upload Car Damage Images",
+                label="Damage Images",
                 file_count="multiple",
-                file_types=["image"]
+                file_types=["image"],
             )
-            
             descriptions = gr.Textbox(
-                label="Image Descriptions",
-                placeholder="Enter descriptions separated by commas or new lines\ne.g., Damaged front bumper, Scratched door, Broken headlight",
-                lines=4,
-                value="Damaged front bumper"
+                label="Damage Descriptions",
+                placeholder="One description per image, comma or newline separated",
+                lines=3,
+                value="Damaged front bumper",
             )
-            
-            submit_btn = gr.Button("🔍 Analyze", variant="primary", size="lg")
-        
+            submit_btn = gr.Button("Analyze", variant="primary", size="lg")
+
+        # ── Right column: results ─────────────────────────────────────────────
         with gr.Column(scale=1):
-            gr.Markdown("### 📊 Analysis Summary")
-            overall_status = gr.Markdown(label="Overall Status")
-            
-            gr.Markdown("### 🔬 Detailed Analysis")
-            ai_check_output = gr.Markdown(label="AI Generation Check")
-            tampering_output = gr.Markdown(label="Tampering Check")
-            description_output = gr.Markdown(label="Description Match")
-            duplication_output = gr.Markdown(label="Duplication Check")
-            damage_output = gr.Markdown(label="Damage Analysis")
-    
-    # Add gallery for damage analysis visualizations
-    with gr.Row():
-        gr.Markdown("### 🎨 Damage Analysis Visualizations")
-    with gr.Row():
-        damage_gallery = gr.Gallery(
-            label="Original Image | Car Parts Detection | Damage Analysis (per image)",
-            show_label=True,
-            columns=3,
-            object_fit="contain",
-            height="auto"
-        )
-    
-    gr.Markdown(
-        """
-        ---
-        ### 📖 Instructions:
-        1. Enter customer name and car details
-        2. Upload one or more images of car damage
-        3. Provide descriptions for each image (comma or newline separated)
-        4. Click "Analyze for Fraud" to process
-        5. Review the **Confidence Claim Score**, **Repair Cost Estimates**, and detailed report
-        
-        ### 📊 Confidence Claim Score (0-100):
-        - **🟢 80-100**: HIGH CONFIDENCE - Claim appears legitimate
-        - **🟡 60-79**: MEDIUM CONFIDENCE - Some concerns, review recommended
-        - **🟠 40-59**: LOW CONFIDENCE - Multiple red flags detected
-        - **🔴 0-39**: VERY LOW CONFIDENCE - High fraud risk
-        
-        The score is calculated based on:
-        - AI Generation Check (25 points)
-        - Tampering Detection (25 points)
-        - Description Matching (25 points)
-        - Duplication Check (25 points)
-        
-        ### 💰 Repair Cost Estimation:
-        - The system automatically estimates repair costs based on:
-          - **Detected car parts** (Front bumper, Hood, Door, etc.)
-          - **Damage severity** (Low, Medium, High)
-          - **Market-based part prices** (average replacement values)
-        - Cost estimates are shown for each damaged part
-        - **Total repair cost** is displayed in the summary
-        - Costs are calculated as: Base Part Price × Severity Multiplier
-        
-        ### 📝 Notes:
-        - **Green boxes** = Passed validation ✅
-        - **Red boxes** = Failed validation / Fraud detected ❌
-        - **Yellow boxes** = Warnings / Manual review needed ⚠️
-        - **Blue boxes** = Information / Skipped checks ℹ️
-        - All submissions are saved with timestamp in `fraud_detection_data/` folder
-        - The system performs comprehensive 5-stage validation for fraud detection
-        - Damage visualizations show detected car parts with color-coded severity levels
-        """
-    )
-    
+            overall_status = gr.Markdown()
+
+            with gr.Tabs():
+                with gr.Tab("AI Detection"):
+                    ai_check_output = gr.Markdown()
+                with gr.Tab("Tampering"):
+                    tampering_output = gr.Markdown()
+                with gr.Tab("Description"):
+                    description_output = gr.Markdown()
+                with gr.Tab("Duplication"):
+                    duplication_output = gr.Markdown()
+                with gr.Tab("Damage"):
+                    damage_output = gr.Markdown()
+                    damage_gallery = gr.Gallery(
+                        label="Damage Visualizations",
+                        show_label=True,
+                        columns=3,
+                        object_fit="contain",
+                        height="auto",
+                    )
+
     submit_btn.click(
         fn=process_gradio_submission,
         inputs=[images, descriptions, customer_name, car_details],
@@ -853,23 +845,16 @@ with gr.Blocks(title="Automotive Fraud Detection System", css="""
             description_output,
             duplication_output,
             damage_output,
-            damage_gallery
-        ]
+            damage_gallery,
+        ],
     )
 
 
 if __name__ == "__main__":
-    print("\n" + "=" * 70)
-    print("Starting Automotive Fraud Detection System...")
-    print("=" * 70)
-    print("\nThe web interface will open in your browser.")
-    print("You can also access it at: http://localhost:7860")
-    print("\nPress Ctrl+C to stop the server.")
-    print("=" * 70 + "\n")
-    
     app.launch(
         server_name="0.0.0.0",
         server_port=7860,
         share=False,
-        show_error=True
+        show_error=True,
     )
+

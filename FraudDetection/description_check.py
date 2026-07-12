@@ -48,30 +48,63 @@ class DescriptionMatcher:
         print(f"Description matching model initialized using {self.model_name}!\n")
 
     def _parse_response(self, response_text):
-        """Parse JSON response from the VLM"""
+        """Parse VLM response — tries JSON first, then falls back to markdown key-value format."""
+        import re
+
+        # --- Attempt 1: JSON block ---
         try:
             start = response_text.find('{')
             end = response_text.rfind('}') + 1
-
             if start != -1 and end > start:
-                json_str = response_text[start:end]
-                return json.loads(json_str)
-            else:
-                return {
-                    'MATCH': 'Unclear',
-                    'CONFIDENCE': 0,
-                    'CAR_PART': 'Unknown',
-                    'DAMAGE_STATUS': 'Unclear',
-                    'REASONING': response_text
-                }
+                return json.loads(response_text[start:end])
         except json.JSONDecodeError:
-            return {
-                'MATCH': 'Unclear',
-                'CONFIDENCE': 0,
-                'CAR_PART': 'Unknown',
-                'DAMAGE_STATUS': 'Unclear',
-                'REASONING': response_text
+            pass
+
+        # --- Attempt 2: **KEY:** Value markdown format ---
+        # The model sometimes returns fields on a single line or with markdown formatting
+        def extract(key):
+            # Known keys to use as boundaries for lazy matching
+            keys_pattern = r'MATCH|CONFIDENCE|CAR_PART|CAR_PART_ID|DAMAGE_STATUS|DAMAGE_TYPE|DAMAGE_TYPE_ID|REASONING|SEVERITY|CAR PART|DAMAGE STATUS|DAMAGE TYPE'
+            # Match the key, optional asterisks, colon/space. 
+            # Capture lazily until the next known key or end of string.
+            pattern = rf'\*{{0,2}}{re.escape(key)}\*{{0,2}}[:\s]+(.*?)(?=\s*\*{{0,2}}(?:{keys_pattern})\*{{0,2}}[:\s]|$)'
+            
+            m = re.search(pattern, response_text, re.IGNORECASE | re.DOTALL)
+            return m.group(1).strip() if m else None
+
+        match_val = extract('MATCH')
+        confidence_val = extract('CONFIDENCE')
+        car_part_val = extract('CAR_PART') or extract('CAR PART')
+        damage_status_val = extract('DAMAGE_STATUS') or extract('DAMAGE STATUS')
+        damage_type_val = extract('DAMAGE_TYPE') or extract('DAMAGE TYPE')
+        reasoning_val = extract('REASONING')
+        severity_val = extract('SEVERITY')
+
+        if any([match_val, car_part_val, damage_status_val]):
+            parsed = {
+                'MATCH': match_val or 'Unclear',
+                'CONFIDENCE': 0.0,
+                'CAR_PART': car_part_val or 'Unknown',
+                'DAMAGE_STATUS': damage_status_val or 'Unclear',
+                'DAMAGE_TYPE': damage_type_val or 'Unknown',
+                'REASONING': reasoning_val or response_text,
+                'SEVERITY': severity_val or 'Unknown',
             }
+            try:
+                parsed['CONFIDENCE'] = float(confidence_val) if confidence_val else 0.0
+            except (ValueError, TypeError):
+                parsed['CONFIDENCE'] = 0.0
+            return parsed
+
+        # --- Fallback: return raw text as reasoning ---
+        return {
+            'MATCH': 'Unclear',
+            'CONFIDENCE': 0,
+            'CAR_PART': 'Unknown',
+            'DAMAGE_STATUS': 'Unclear',
+            'REASONING': response_text,
+        }
+
 
     def _image_to_base64(self, img):
         """Convert PIL Image to base64 string"""
