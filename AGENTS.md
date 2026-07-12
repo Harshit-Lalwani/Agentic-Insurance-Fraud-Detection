@@ -8,6 +8,8 @@
 source /root/Megathon25/venv/bin/activate && python /root/Megathon25/FraudDetection/input.py
 ```
 
+Then open http://localhost:7860 in your browser.
+
 ## Key structure
 
 | Path | Role |
@@ -20,13 +22,14 @@ source /root/Megathon25/venv/bin/activate && python /root/Megathon25/FraudDetect
 | `FraudDetection/combined_damage_detector.py` | Car parts + damage segmentation via Detectron2 |
 | `FraudDetection/car_parts_detector.py` | Standalone Detectron2 parts detector |
 | `damage-det/` | Expects `model_parts.pth` and `model_damage.pth` |
+| `FraudDetection/.env` | Must contain `NVIDIA_API_KEY=...` (see `.env.example`) |
 
 ## Requirements
 
 **Hard prerequisites (not optional):**
 - `FraudDetection/.env` with `NVIDIA_API_KEY=...`
-- `damage-det/model_parts.pth` — 351 MB car parts Mask R-CNN weights
-- `damage-det/model_damage.pth` — 351 MB damage Mask R-CNN weights
+- `damage-det/model_parts.pth` — 336 MB car parts Mask R-CNN weights
+- `damage-det/model_damage.pth` — 335 MB damage Mask R-CNN weights
 - TensorFlow/Keras models under `FraudDetection/Image-Tampering-Detection-using-ELA-and-Metadata-Analysis/` (`model_ela.h5`, `Weather_Model.h5`)
 
 ## Developer commands
