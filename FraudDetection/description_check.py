@@ -1,6 +1,7 @@
 """
 Image-Description Matching Module
-Validates if image matches the provided description using NVIDIA NIM VLM
+Validates if image matches the provided description using a VLM.
+Primary: Gemini (gemini-3.5-flash). Fallback: NVIDIA NIM (Llama 3.2 Vision).
 """
 
 import os
@@ -9,6 +10,8 @@ import base64
 import io
 from PIL import Image
 from openai import OpenAI
+from google import genai
+from google.genai import types as genai_types
 from dotenv import load_dotenv
 
 
@@ -29,10 +32,25 @@ class DescriptionMatcher:
         "Corrosion": 7, "Cracked": 8
     }
 
-    def __init__(self, api_key=None, model_name=None, base_url=None):
-        """Initialize NVIDIA NIM VLM for image-description matching"""
+    def __init__(self, api_key=None, model_name=None, base_url=None,
+                 google_api_key=None, gemini_model_name=None):
+        """Initialize VLM(s) for image-description matching.
+
+        Gemini is the primary VLM; NVIDIA NIM is kept configured as a fallback
+        used automatically if a Gemini call fails.
+        """
         load_dotenv()
 
+        # --- Gemini (primary) ---
+        if google_api_key is None:
+            google_api_key = os.getenv("GOOGLE_API_KEY")
+        if gemini_model_name is None:
+            gemini_model_name = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+
+        self.gemini_model_name = gemini_model_name
+        self.gemini_client = genai.Client(api_key=google_api_key) if google_api_key else None
+
+        # --- NVIDIA NIM (fallback) ---
         if api_key is None:
             api_key = os.getenv("NVIDIA_API_KEY")
         if model_name is None:
@@ -40,12 +58,22 @@ class DescriptionMatcher:
         if base_url is None:
             base_url = os.getenv("NVIDIA_NIM_BASE_URL", "https://api.build.nvidia.com/v1")
 
-        if not api_key:
-            raise ValueError("NVIDIA_API_KEY not found. Please set it in .env file or pass as argument.")
-
         self.model_name = model_name
-        self.client = OpenAI(base_url=base_url, api_key=api_key)
-        print(f"Description matching model initialized using {self.model_name}!\n")
+        self.nim_client = OpenAI(base_url=base_url, api_key=api_key) if api_key else None
+
+        if not self.gemini_client and not self.nim_client:
+            raise ValueError(
+                "Neither GOOGLE_API_KEY nor NVIDIA_API_KEY found. "
+                "Please set at least one in .env file or pass as argument."
+            )
+
+        if self.gemini_client:
+            print(f"Description matching model initialized using Gemini ({self.gemini_model_name}), "
+                  f"with NVIDIA NIM ({self.model_name}) as fallback!\n" if self.nim_client
+                  else f"Description matching model initialized using Gemini ({self.gemini_model_name})!\n")
+        else:
+            print(f"GOOGLE_API_KEY not set — description matching model initialized using "
+                  f"NVIDIA NIM ({self.model_name}) only!\n")
 
     def _parse_response(self, response_text):
         """Parse VLM response — tries JSON first, then falls back to markdown key-value format."""
@@ -112,6 +140,36 @@ class DescriptionMatcher:
         img.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
+    def _call_gemini(self, prompt_text, img):
+        """Generate a response via Gemini (primary VLM)"""
+        response = self.gemini_client.models.generate_content(
+            model=self.gemini_model_name,
+            contents=[prompt_text, img],
+        )
+        return response.text
+
+    def _call_nim(self, prompt_text, img_base64):
+        """Generate a response via NVIDIA NIM (fallback VLM)"""
+        response = self.nim_client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt_text},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{img_base64}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=1024
+        )
+        return response.choices[0].message.content
+
     def verify(self, image_path, description):
         """
         Verify if image matches the description
@@ -176,30 +234,26 @@ class DescriptionMatcher:
                 "9. SEVERITY: ['Low', 'Medium', 'High']"
             )
 
-            # Convert image to base64
-            img_base64 = self._image_to_base64(img)
+            response_text = None
+            used_fallback = False
 
-            # Generate response via NVIDIA NIM
-            response = self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt_text},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/png;base64,{img_base64}"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens=1024
-            )
+            # Try Gemini first
+            if self.gemini_client:
+                try:
+                    response_text = self._call_gemini(prompt_text, img)
+                except Exception as gemini_error:
+                    if self.nim_client:
+                        used_fallback = True
+                    else:
+                        raise gemini_error
 
-            response_text = response.choices[0].message.content
+            # Fall back to NVIDIA NIM if Gemini is unavailable or failed
+            if response_text is None and self.nim_client:
+                img_base64 = self._image_to_base64(img)
+                response_text = self._call_nim(prompt_text, img_base64)
+
+            if used_fallback:
+                result['used_fallback'] = True
 
             # Parse response
             parsed = self._parse_response(response_text)

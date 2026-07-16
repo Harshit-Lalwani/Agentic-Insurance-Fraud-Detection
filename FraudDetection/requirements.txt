@@ -88,8 +88,9 @@ httpx>=0.25.0
 websockets>=12.0
 
 # ----------------------------------------------------------------------------
-# OpenAI-compatible NVIDIA NIM API (for VLM Description Matching)
+# VLM APIs for Description Matching: Gemini (primary), NVIDIA NIM (fallback)
 # ----------------------------------------------------------------------------
+google-genai>=0.1.0
 openai>=1.0.0
 
 # ----------------------------------------------------------------------------
