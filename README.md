@@ -70,7 +70,7 @@ The **Automotive Fraud Detection System** is an advanced AI-powered solution des
 - **Action**: Rejects images with tampering score > 60%
 
 #### 3. 📝 Description Matching
-- **Model**: NVIDIA NIM — Llama 3.2 Vision 11B (OpenAI-compatible API)
+- **Model**: Gemini (`gemini-3.5-flash`) — primary VLM, with NVIDIA NIM (Llama 3.2 Vision 11B, OpenAI-compatible API) as an automatic fallback if the Gemini call fails
 - **Method**: Vision-Language Model (VLM) analysis
 - **Validation**:
   - Car part identification (21 part categories)
@@ -171,7 +171,7 @@ Quantitative fraud risk assessment (0-100):
 ┌─────────────────────────────────────────────────────────────┐
 │            STAGE 3: DESCRIPTION MATCHING                    │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │ • Send image + description to Gemini AI              │   │
+│  │ • Send image + description to Gemini (fallback: NIM) │   │
 │  │ • Extract car parts from image                       │   │
 │  │ • Identify damage types                              │   │
 │  │ • Semantic consistency analysis                      │   │
@@ -236,7 +236,7 @@ Quantitative fraud risk assessment (0-100):
 - **Object Detection**: Detectron2 (Mask R-CNN, ResNet-50 FPN)
 - **AI Detection**: Hugging Face Transformers (ViT-based models)
 - **Tampering**: TensorFlow/Keras (DenseNet121)
-- **Description**: NVIDIA NIM VLM (Llama 3.2 Vision 11B)
+- **Description**: Gemini (`gemini-3.5-flash`), with NVIDIA NIM VLM (Llama 3.2 Vision 11B) as fallback
 - **Duplication**: OpenAI CLIP (ViT-B/32) + ImageHash
 
 ---
@@ -334,10 +334,12 @@ nano .env
 Add the following content:
 
 ```env
-# NVIDIA NIM API Key (REQUIRED)
-NVIDIA_API_KEY=your_nvidia_nim_api_key_here
+# Gemini API Key (primary VLM for description matching)
+GOOGLE_API_KEY=your_google_api_key_here
+GEMINI_MODEL=gemini-3.5-flash
 
-# Customize NIM model/base URL (optional)
+# NVIDIA NIM API Key (fallback VLM, used automatically if the Gemini call fails)
+NVIDIA_API_KEY=your_nvidia_nim_api_key_here
 NVIDIA_NIM_BASE_URL=https://api.build.nvidia.com/v1
 NVIDIA_NIM_MODEL=meta/llama-3.2-11b-vision-instruct
 
@@ -346,7 +348,14 @@ MODEL_CONFIDENCE_THRESHOLD=0.7
 DAMAGE_SEVERITY_HIGH_THRESHOLD=0.5
 ```
 
-**Get Your NVIDIA NIM API Key**:
+At least one of `GOOGLE_API_KEY` / `NVIDIA_API_KEY` must be set; description matching uses whichever are available, preferring Gemini.
+
+**Get Your Gemini API Key**:
+1. Visit [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+2. Sign in with your Google account and create an API key
+3. Copy and paste into `.env` file as `GOOGLE_API_KEY`
+
+**Get Your NVIDIA NIM API Key** (fallback):
 1. Visit [build.nvidia.com](https://build.nvidia.com)
 2. Sign in with your NVIDIA account
 3. Navigate to any VLM model page and click "Get API Key"
@@ -465,7 +474,8 @@ pip install -r requirements.txt
 Copy the template and fill in your API key:
 ```bash
 cp .env.example .env
-# Edit .env with your NVIDIA_API_KEY from https://build.nvidia.com
+# Edit .env with your GOOGLE_API_KEY (https://aistudio.google.com/apikey)
+# and/or NVIDIA_API_KEY (https://build.nvidia.com) — at least one is required
 ```
 
 ### 4. Download Model Files
@@ -631,11 +641,12 @@ result = matcher.verify("image.jpg", "damaged bumper")
 - Check if model files exist in correct paths
 - For Keras compatibility issues: `pip install tf-keras`
 
-### NVIDIA NIM API Errors
-- Verify `NVIDIA_API_KEY` in `.env` file
-- Get a key from https://build.nvidia.com
+### Description Matching VLM Errors
+- Verify `GOOGLE_API_KEY` (primary) and/or `NVIDIA_API_KEY` (fallback) in `.env` file — at least one is required
+- Get a Gemini key from https://aistudio.google.com/apikey, or a NIM key from https://build.nvidia.com
 - Ensure internet connection for API calls
-- The default model is `meta/llama-3.2-11b-vision-instruct`; switch via `NVIDIA_NIM_MODEL` in `.env`
+- If Gemini calls fail (e.g. rate limits, transient errors), the pipeline automatically retries with NVIDIA NIM — check for `"used_fallback": true` in the description-check result to confirm this happened
+- The default Gemini model is `gemini-3.5-flash` (switch via `GEMINI_MODEL`); the default NIM model is `meta/llama-3.2-11b-vision-instruct` (switch via `NVIDIA_NIM_MODEL`)
 
 ### Memory Issues
 - Process images one at a time
@@ -793,7 +804,7 @@ graph TD
     
     B --> H[Hugging Face Transformers]
     C --> I[TensorFlow / Keras]
-    D --> J[NVIDIA NIM VLM API]
+    D --> J[Gemini VLM API + NVIDIA NIM fallback]
     E --> K[CLIP + ImageHash]
     F --> L[Detectron2]
     G --> L
@@ -859,7 +870,7 @@ Detects image tampering using ELA and metadata validation.
 
 ### DescriptionMatcher Class
 
-Validates image-description consistency using NVIDIA NIM VLM (Llama 3.2 Vision).
+Validates image-description consistency using Gemini (`gemini-3.5-flash`) as the primary VLM, falling back to NVIDIA NIM (Llama 3.2 Vision) if the Gemini call fails.
 
 #### Methods
 
@@ -1050,16 +1061,17 @@ pip install detectron2 -f \
   https://dl.fbaipublicfiles.com/detectron2/wheels/cu118/torch2.0/index.html
 ```
 
-#### Issue 3: NVIDIA NIM API Key Error
+#### Issue 3: Description Matching API Key Error
 
-**Error**: `AuthenticationError: 401` from the NIM API
+**Error**: `AuthenticationError: 401` from Gemini or the NIM API
 
 **Solution**:
 ```bash
-# Verify API key in .env file
-cat .env | grep NVIDIA_API_KEY
+# Verify API keys in .env file (at least one required)
+cat .env | grep -E "GOOGLE_API_KEY|NVIDIA_API_KEY"
 
-# Get new key from: https://build.nvidia.com
+# Get a Gemini key from: https://aistudio.google.com/apikey
+# Get a NIM key from: https://build.nvidia.com
 # Update .env file with valid key
 ```
 
@@ -1214,7 +1226,8 @@ SOFTWARE.
 - **Detectron2** - Object detection (Facebook AI Research)
 - **OpenAI CLIP** - Vision-language models
 - **Gradio** - Web interface framework
-- **NVIDIA NIM** - VLM inference API (Llama 3.2 Vision)
+- **Gemini** - VLM inference API for description matching (primary)
+- **NVIDIA NIM** - VLM inference API (Llama 3.2 Vision), used as fallback
 
 ### Datasets & Pre-trained Models
 - **CASIA2.0** - Image tampering dataset (ELA training)
@@ -1282,7 +1295,7 @@ Submit feature requests via GitHub Issues with:
 ## 📊 Statistics
 
 - **Total Lines of Code**: ~2,600
-- **Number of Models**: 8 (AI x2, ELA, Weather, VLM, CLIP, Parts, Damage)
+- **Number of Models**: 9 (AI x2, ELA, Weather, VLM x2 [Gemini + NIM fallback], CLIP, Parts, Damage)
 - **Detection Stages**: 5
 - **Car Part Categories**: 21
 - **Damage Types**: 8

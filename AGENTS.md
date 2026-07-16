@@ -17,17 +17,17 @@ Then open http://localhost:7860 in your browser.
 | `FraudDetection/input.py` | Main app — Gradio UI + `FraudDetectionPipeline` orchestrator |
 | `FraudDetection/ai_detector.py` | AI-generated image detection (HuggingFace ensemble) |
 | `FraudDetection/tampering_check.py` | ELA + metadata tampering detection (TensorFlow/Keras models) |
-| `FraudDetection/description_check.py` | NVIDIA NIM VLM description matching (Llama 3.2 Vision 11B) |
+| `FraudDetection/description_check.py` | VLM description matching — Gemini (`gemini-3.5-flash`) primary, NVIDIA NIM (Llama 3.2 Vision 11B) fallback |
 | `FraudDetection/duplication_check.py` | Perceptual hash + CLIP duplicate detection |
 | `FraudDetection/combined_damage_detector.py` | Car parts + damage segmentation via Detectron2 |
 | `FraudDetection/car_parts_detector.py` | Standalone Detectron2 parts detector |
 | `damage-det/` | Expects `model_parts.pth` and `model_damage.pth` |
-| `FraudDetection/.env` | Must contain `NVIDIA_API_KEY=...` (see `.env.example`) |
+| `FraudDetection/.env` | Must contain `GOOGLE_API_KEY=...` and/or `NVIDIA_API_KEY=...` (see `.env.example`) |
 
 ## Requirements
 
 **Hard prerequisites (not optional):**
-- `FraudDetection/.env` with `NVIDIA_API_KEY=...`
+- `FraudDetection/.env` with at least one of `GOOGLE_API_KEY=...` (Gemini, primary) or `NVIDIA_API_KEY=...` (NVIDIA NIM, fallback)
 - `damage-det/model_parts.pth` — 336 MB car parts Mask R-CNN weights
 - `damage-det/model_damage.pth` — 335 MB damage Mask R-CNN weights
 - TensorFlow/Keras models under `FraudDetection/Image-Tampering-Detection-using-ELA-and-Metadata-Analysis/` (`model_ela.h5`, `Weather_Model.h5`)
